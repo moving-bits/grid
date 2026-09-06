@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
 }
 
 android {
@@ -23,6 +24,13 @@ android {
             minifyEnabled false
         }
     }
+
+    // for jitpack publishing
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
 }
 
 dependencies {
@@ -35,4 +43,21 @@ dependencies {
     // org.json sits in the Android framework, but in JVM unit tests only as an empty stub.
     // The tests therefore use the reference implementation; it is not shipped.
     testImplementation 'org.json:json:20260814'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'net.movingbits'
+                artifactId = 'grid'
+            }
+        }
+        repositories {
+            maven {
+                url = uri("https://jitpack.io")
+            }
+        }
+    }
 }
