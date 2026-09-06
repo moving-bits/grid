@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Grid Demo</string>
+    <string name="demo_cities">Demo: Cities</string>
+    <string name="demo_mountains">Demo: Mountains</string>
+    <string name="demo_database">Demo: Database</string>
+
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="pageNumOfNum">%1$d / %2$d</string>
+
+    <string name="col_city">City</string>
+    <string name="col_country">Country</string>
+    <string name="col_population">Population</string>
+    <string name="col_area">Area</string>
+    <string name="col_mountain">Mountain</string>
+    <string name="col_height">Height</string>
+    <string name="col_lat">Latitude</string>
+    <string name="col_lon">Longitude</string>
+    <string name="col_first">First</string>
+
+    <string name="hint_cell_short">Row %1$d, Column %2$d – City %3$s</string>
+    <string name="hint_cell_long">Long tap: %1$s, %2$s</string>
+    <string name="config_columns">Hide/unhide, sort columns</string>
+    <string name="search">Search</string>
+    <string name="hint_sorted_by">Sorted by %1$s</string>
+    <string name="hint_sort_reset">Sorting reset</string>
+    <string name="hint_title_long">Long tap on title: Column %1$d</string>
+    <string name="hint_boundary">Boundary of fixed columns: %1$d %%</string>
+
+    <!-- database demo -->
+    <string name="select_table">Select table</string>
+    <string name="close">Close</string>
+    <string name="no_tables">No tables in this database</string>
+    <string name="hint_table_selected">Table %1$s</string>
+    <string name="hint_cell_saved">%1$s saved</string>
+    <string name="hint_cell_not_saved">%1$s could not be saved</string>
+</resources>

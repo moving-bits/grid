@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Collapsed view of the operator selection. Compared with the Android default it has no
+  horizontal padding and uses the ordinary text size, so that the longer labels find room all
+  the way up to the arrow.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:ellipsize="end"
+    android:maxLines="1"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />

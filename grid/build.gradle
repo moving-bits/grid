@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.movingbits.grid'
+    compileSdk 37
+    buildToolsVersion '35.0.0'
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 36
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    api 'com.google.android.material:material:1.14.0'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.annotation:annotation:1.10.0'
+    implementation 'org.apache.commons:commons-lang3:3.20.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    // org.json sits in the Android framework, but in JVM unit tests only as an empty stub.
+    // The tests therefore use the reference implementation; it is not shipped.
+    testImplementation 'org.json:json:20260814'
+}

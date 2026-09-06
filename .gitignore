@@ -1,0 +1,25 @@
+# generated code
+bin/
+gen/
+annotation_gen/
+generated/
+
+# vm crash logs
+hs_err_pid*.log
+
+# annotation processor log files
+androidannotations.log
+# build system temporary files
+.gradle/
+build/
+build-cache/
+local.properties
+# ignore IDEA settings
+.idea/
+# but have a common checkstyle configuration
+!.idea/checkstyle-idea.xml
+*.iml
+# ignore AS layout captures
+captures/
+# ignore Claude internal files
+.claude/

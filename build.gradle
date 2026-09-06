@@ -1,0 +1,5 @@
+// Root build script. Plugins are only declared here and applied in the modules.
+plugins {
+    id 'com.android.application' version '8.13.2' apply false
+    id 'com.android.library' version '8.13.2' apply false
+}

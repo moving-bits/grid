@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Identifiers of the search dialog's rows, which are built in code. -->
+<resources>
+    <item name="grid_row_title" type="id" />
+    <item name="grid_row_operator" type="id" />
+    <item name="grid_row_value" type="id" />
+</resources>
