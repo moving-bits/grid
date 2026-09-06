@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace 'com.movingbits.grid'
-    compileSdk 37
+    compileSdk 36
     buildToolsVersion '35.0.0'
 
     defaultConfig {
