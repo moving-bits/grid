@@ -3,6 +3,7 @@ package com.movingbits.grid;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
+import android.os.Bundle;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -695,6 +696,42 @@ public class DatabaseGrid extends Grid implements GridDataSource {
     /** Puts a name in quotation marks, so that keywords work as names too. */
     private static String quote(final String identifier) {
         return '"' + identifier.replace("\"", "\"\"") + '"';
+    }
+
+    // ---------------------------------------------------------------- State
+
+    /**
+     * The state, with the current table added: it settles which columns there are at all, so
+     * the configuration object in the state only makes sense together with it.
+     */
+    @Override
+    public String toStateJson() {
+        return GridState.withTable(super.toStateJson(), currentTable);
+    }
+
+    /**
+     * Takes over a state. The table comes first – its columns are what everything else in the
+     * state refers to.
+     *
+     * <p>The database therefore has to be set beforehand, through
+     * {@link #setDatabase(SQLiteDatabase)}: without it there is no table to be chosen.</p>
+     */
+    @Override
+    public DatabaseGrid state(final String json) {
+        final String table = GridState.tableOf(json);
+        // A table already chosen is left alone: choosing it again would drop its columns and
+        // build them anew for nothing.
+        if (!table.isEmpty() && !table.equals(currentTable)) {
+            setCurrentTable(table);
+        }
+        super.state(json);
+        return this;
+    }
+
+    @Override
+    public DatabaseGrid readState(final Bundle state) {
+        super.readState(state);
+        return this;
     }
 
     // ----------------------------------------------------------------- Chain

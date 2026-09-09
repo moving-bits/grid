@@ -1,6 +1,7 @@
 package com.movingbits.grid;
 
 import android.content.Context;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.HapticFeedbackConstants;
@@ -55,6 +56,13 @@ public class GridView extends FrameLayout {
 
     private static final String[][] NO_ROWS = new String[0][];
 
+    /** Keys the view's state is stored under in a bundle. */
+    private static final String STATE_PAGE = "com.movingbits.grid.view.page";
+    private static final String STATE_SCROLL_FIXED = "com.movingbits.grid.view.scroll_fixed";
+    private static final String STATE_SCROLL_BODY = "com.movingbits.grid.view.scroll_body";
+    private static final String STATE_TOP_ROW = "com.movingbits.grid.view.top_row";
+    private static final String STATE_TOP_OFFSET = "com.movingbits.grid.view.top_offset";
+
     private Grid grid;
     private GridRowView headerRow;
     private GridAdapter adapter;
@@ -66,6 +74,10 @@ public class GridView extends FrameLayout {
     private int currentPage;
     private int lastBodyHeight;
     private int lastMeasuredWidth;
+
+    /** Row the list is to be scrolled back to; {@code -1} when nothing is pending. */
+    private int restoreTopRow = -1;
+    private int restoreTopOffset;
 
     /** Current boundary share; the user may have moved it away from the configuration. */
     private float boundaryFraction = Grid.DEFAULT_FIXED_BOUNDARY_FRACTION;
@@ -156,6 +168,7 @@ public class GridView extends FrameLayout {
         this.grid = grid;
         this.currentPage = 0;
         this.pageRows = NO_ROWS;
+        this.restoreTopRow = -1;
         // Only when a grid is set, not on refresh(): a boundary the user has moved should
         // survive a data update.
         this.boundaryFraction = grid.getFixedBoundaryFraction();
@@ -240,6 +253,82 @@ public class GridView extends FrameLayout {
         if (pageChangedListener != null) {
             pageChangedListener.onPageChanged(currentPage, getPageCount());
         }
+    }
+
+    // ---------------------------------------------------------------- State
+
+    /**
+     * Writes the view's state into the bundle handed over – meant for
+     * {@code Activity.onSaveInstanceState}: the displayed page and the positions the areas are
+     * scrolled to. {@link #readState(Bundle)} takes it back.
+     *
+     * <p>What belongs to the configuration is stored by {@link Grid#addState(Bundle)}, which is
+     * to be called as well.</p>
+     */
+    public void addState(final Bundle outState) {
+        if (outState == null || grid == null) {
+            return;
+        }
+        outState.putInt(STATE_PAGE, currentPage);
+        outState.putInt(STATE_SCROLL_FIXED, fixedSync.getScrollX());
+        outState.putInt(STATE_SCROLL_BODY, bodySync.getScrollX());
+        // With paging one page fills the height exactly; there is nothing to scroll to
+        // vertically.
+        if (!grid.isPaged()) {
+            final int row = layoutManager.findFirstVisibleItemPosition();
+            if (row != RecyclerView.NO_POSITION) {
+                outState.putInt(STATE_TOP_ROW, row);
+                outState.putInt(STATE_TOP_OFFSET, topOffsetOf(row));
+            }
+        }
+    }
+
+    /**
+     * Takes the state back out of a bundle – the one handed to {@code Activity.onCreate} or to
+     * {@code onRestoreInstanceState}. A bundle without a state, {@code null} included, has no
+     * effect.
+     *
+     * <p>The call belongs directly after {@link #setGrid(Grid)}, whose grid has taken over its
+     * own state through {@link Grid#readState(Bundle)} beforehand.</p>
+     */
+    public void readState(final Bundle state) {
+        if (state == null || grid == null || !state.containsKey(STATE_PAGE)) {
+            return;
+        }
+        final int page = Math.max(0, Math.min(state.getInt(STATE_PAGE), getPageCount() - 1));
+        if (page != currentPage) {
+            currentPage = page;
+            reload();
+            notifyPageChanged();
+        }
+        // A narrower screen cannot be scrolled as far; the areas cap the position themselves
+        // on the next layout pass and report the capped one back.
+        fixedSync.moveTo(state.getInt(STATE_SCROLL_FIXED, 0));
+        bodySync.moveTo(state.getInt(STATE_SCROLL_BODY, 0));
+        restoreTopRow = state.getInt(STATE_TOP_ROW, -1);
+        restoreTopOffset = state.getInt(STATE_TOP_OFFSET, 0);
+    }
+
+    /** Distance of a row's upper edge from the upper edge of the list; negative above it. */
+    private int topOffsetOf(final int row) {
+        final View view = layoutManager.findViewByPosition(row);
+        return view == null ? 0 : view.getTop();
+    }
+
+    /**
+     * Brings the list back to the row it was scrolled to. That is only possible once the rows
+     * exist, and they need the widths, which are settled in the first measuring pass – hence
+     * the attempt with every layout pass until it works.
+     */
+    private void applyRestoredRow() {
+        if (restoreTopRow < 0 || adapter == null || adapter.getItemCount() == 0) {
+            return;
+        }
+        final int row = Math.min(restoreTopRow, adapter.getItemCount() - 1);
+        final int offset = restoreTopOffset;
+        restoreTopRow = -1;
+        // Do not scroll from within the running layout pass.
+        post(() -> layoutManager.scrollToPositionWithOffset(row, offset));
     }
 
     // -------------------------------------------------------------- Sorting
@@ -384,6 +473,7 @@ public class GridView extends FrameLayout {
         super.onLayout(changed, left, top, right, bottom);
         updateBoundaryPosition();
         updateRowHeights();
+        applyRestoredRow();
     }
 
     /**

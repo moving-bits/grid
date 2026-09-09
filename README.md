@@ -123,25 +123,26 @@ the application's job (see the demo).
 ### Configuration
 
 | Method                          | Effect                                                          |
-|---------------------------------|------------------------------------------------------------------|
-| `column(...)`                   | add a column: title, type, alignment, width                      |
-| `data(GridDataSource)`          | source of the contents to display (`rows(List)` for `MemGrid`)   |
-| `fixedColumns(int)`             | fix the first n columns (default 0)                              |
-| `rowsPerPage(int)`              | switch paging on (0 = off)                                       |
-| `totalWidth(float dp)`          | state the total width (without one: the available width)         |
-| `colors(GridColors)`            | paint with colours of your own instead of the theme's            |
-| `configuration(String)`         | take over a configuration object as JSON                         |
-| `onConfigurationChanged`        | hook carrying the new configuration object after every change    |
-| `ignoreColumns(String...)`      | exclude columns entirely                                         |
-| `clearColumns()`                | drop every column (a different data set, e.g. another table)     |
-| `sortable(boolean)`             | sorting by tapping the header row (default on)                   |
-| `onSortChanged`                 | hook for a changed sort order                                    |
-| `fixedBoundaryFraction(float)`  | boundary share of the fixed area (default 0.4)                   |
-| `adjustableFixedBoundary(bool)` | let the boundary be moved by a long tap (default off)            |
-| `alternatingRowColors(bool)`    | tint every other data row slightly (default off)                 |
-| `onFixedBoundaryChanged`        | hook for a boundary moved by the user                            |
+|---------------------------------|-----------------------------------------------------------------|
+| `column(...)`                   | add a column: title, type, alignment, width                     |
+| `data(GridDataSource)`          | source of the contents to display (`rows(List)` for `MemGrid`)  |
+| `fixedColumns(int)`             | fix the first n columns (default 0)                             |
+| `rowsPerPage(int)`              | switch paging on (0 = off)                                      |
+| `totalWidth(float dp)`          | state the total width (without one: the available width)        |
+| `colors(GridColors)`            | paint with colors of your own instead of the theme's            |
+| `configuration(String)`         | take over a configuration object as JSON                        |
+| `onConfigurationChanged`        | hook carrying the new configuration object after every change   |
+| `addState` / `readState`        | store and read the state on a change of screen orientation      |
+| `ignoreColumns(String...)`      | exclude columns entirely                                        |
+| `clearColumns()`                | drop every column (a different data set, e.g. another table)    |
+| `sortable(boolean)`             | sorting by tapping the header row (default on)                  |
+| `onSortChanged`                 | hook for a changed sort order                                   |
+| `fixedBoundaryFraction(float)`  | boundary share of the fixed area (default 0.4)                  |
+| `adjustableFixedBoundary(bool)` | let the boundary be moved by a long tap (default off)           |
+| `alternatingRowColors(bool)`    | tint every other data row slightly (default off)                |
+| `onFixedBoundaryChanged`        | hook for a boundary moved by the user                           |
 | `search(List&lt;SearchRequest&gt;)`   | set search conditions; transient, not in the configuration object |
-| `onSearchChanged`               | hook for a changed search                                        |
+| `onSearchChanged`               | hook for a changed search                                       |
 | `onCellClick` / `onCellLongClick`     | hook for a short / long tap on a data cell                 |
 | `onItemClick` / `onItemLongClick`     | the same with the record instead of the row of texts (`MemGrid`) |
 | `onHeaderClick` / `onHeaderLongClick` | hook for a short / long tap on a header cell               |
@@ -168,7 +169,7 @@ Column widths: `ColumnWidth.dp(x)`, `ColumnWidth.percent(0..1)` or – as the de
   shows where the width can be grabbed. It is drawn in the row rather than in the cells, so
   that it runs on without being interrupted by the padding.
 * **Moving a column width**: a long tap in the **header row** on a column's right edge grabs
-  that edge; a line in the accent colour follows the finger, and on release the width is taken
+  that edge; a line in the accent color follows the finger, and on release the width is taken
   over and reported through `onConfigurationChanged`. Below 20 dp it does not go – the line
   stops there. The column has a fixed width afterwards, even if it was `remaining()` or
   `percent(...)` before.
@@ -188,7 +189,7 @@ Column widths: `ColumnWidth.dp(x)`, `ColumnWidth.percent(0..1)` or – as the de
   title at that spot rather than overlaying it.
 * **The boundary line**: when content is hidden at the boundary – at the end of the fixed
   columns or at the start of the free ones, that is, exactly when the header row shows one of
-  the two arrows there – a vertical line in the theme's accent colour appears at the
+  the two arrows there – a vertical line in the theme's accent color appears at the
   transition, running across the header row and all data rows. When both areas end flush at the
   boundary it disappears. Between the two areas lies a shaded gap of 8 dp with the line in its
   middle; the gap is at the same time part of the line's 48 dp wide grab area.
@@ -206,11 +207,11 @@ Column widths: `ColumnWidth.dp(x)`, `ColumnWidth.percent(0..1)` or – as the de
   "…". Vertical scrolling is switched off.
 * **Alignment**: horizontally configurable per column, vertically always to the top.
 * **Write-protected columns** are recognisable by their slightly tinted header cell
-  (`colorOnSurface` over `colorSurface`, as with the alternating row colours, only stronger).
+  (`colorOnSurface` over `colorSurface`, as with the alternating row colors, only stronger).
   The hint sits in the header row, not on every data cell: it applies to the column. What counts
   as write-protected is stated by `GridColumn.readOnly(boolean)` or the field `r` in the
   configuration object; without a value it is `ColumnType.UNKNOWN` alone.
-* **Alternating row colours** (only after `alternatingRowColors(true)`): every other data row
+* **Alternating row colors** (only after `alternatingRowColors(true)`): every other data row
   gets a hint of `colorOnSurface` laid over `colorSurface` — in a light theme that is a light
   grey, in a dark one correspondingly a little lighter instead of darker. What counts is the
   running number within the whole data set, not the position on the page; the header row stays
@@ -220,10 +221,10 @@ Column widths: `ColumnWidth.dp(x)`, `ColumnWidth.percent(0..1)` or – as the de
   respectively), unless a palette is handed over through `colors(GridColors)`. Touch feedback
   only appears where a hook is configured as well.
 
-### Colours
+### Colors
 
 By default the grid follows the Material 2 theme of the embedding application, and that needs
-no setting up. Whoever wants other colours hands a `GridColors` to `Grid.colors(...)`; the
+no setting up. Whoever wants other colors hands a `GridColors` to `Grid.colors(...)`; the
 palette can be built once and shared by several grids.
 
 ```java
@@ -234,16 +235,16 @@ new Grid(dataSource)
                 .accent(0xFFFFB300))      // boundary line, dragged column edge
 ```
 
-Two of the colours carry the rest: `surface` is the background, `onSurface` the base for the
+Two of the colors carry the rest: `surface` is the background, `onSurface` the base for the
 text and for everything drawn over the background. Setting those two is enough for a coherent
 look — the divider lines, column lines, scroll hints, the shading at the boundary and the tints
 of alternating rows and write-protected headers are all derived from them, with the same
 relative weights the theme path uses.
 
-| Method | Colours |
-|--------|---------|
+| Method | Colors |
+|--------|--------|
 | `surface(int)` | background of the header row, the data rows and the view behind them |
-| `onSurface(int)` | the text, and the base for every colour below that is not set on its own |
+| `onSurface(int)` | the text, and the base for every color below that is not set on its own |
 | `accent(int)` | the boundary line, the line while a column edge is dragged, the separator in the column dialog |
 | `alternateRow(int)` | background of every other data row (only after `alternatingRowColors(true)`) |
 | `readOnlyHeader(int)` | background of the header cell of a write-protected column |
@@ -252,13 +253,13 @@ relative weights the theme path uses.
 | `boundaryShadow(int)` | the shading inside the gap at the boundary of the fixed area |
 | `scrollHint(int)` | the arrows pointing at columns outside the window |
 
-Every colour left unset comes from the theme, and an explicit value always wins over a derived
-one. Colours are ARGB values, so a fully transparent colour is a valid value — "not set" is
+Every color left unset comes from the theme, and an explicit value always wins over a derived
+one. Colors are ARGB values, so a fully transparent color is a valid value — "not set" is
 kept apart from "set to zero".
 
-`onSurface` is the one colour that also reaches the text. Without it the cells keep the colour
+`onSurface` is the one color that also reaches the text. Without it the cells keep the color
 of their text appearance, which is what a theme intends; with it, a dark background stays
-readable. The colours are read while the view is built, so a different palette handed over
+readable. The colors are read while the view is built, so a different palette handed over
 afterwards takes effect on `GridView.refresh()`.
 
 ### The configuration object
@@ -323,6 +324,51 @@ written out — not even under `columns_hidden`. The same holds for columns miss
 names and invalid values are skipped, and a string that cannot be read has no effect.
 **Writing**, by contrast, is complete, so that the stored state does not later depend on
 defaults in the code.
+
+### Keeping state on configuration changes (eg. screen rotation)
+
+A change of screen orientation builds the activity anew. To prevent a full restart with
+falling back to default position, the grid and its view preserve their current state in
+a JSON string, that the application can put into the bundle and read it back from it:
+
+```java
+@Override
+protected void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    grid.addState(outState);        // configuration, search, data order
+    gridView.addState(outState);    // page, scroll positions
+}
+
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    Grid grid = buildGrid();        // columns and hooks as always
+    grid.readState(savedInstanceState);
+    gridView.setGrid(grid);
+    gridView.readState(savedInstanceState);
+}
+```
+
+The order matters: the grid's state belongs **before** `setGrid(...)` – it settles the columns
+and the data order – the view's state directly **after** it, because it needs the grid. Both
+calls cope with a bundle that carries no state, `null` included, so the same code serves a
+fresh start.
+
+| Where | What is stored |
+|-------|----------------|
+| `Grid.addState(Bundle)` | the whole configuration object, plus the search and the data order, which the display order does not tell |
+| `GridView.addState(Bundle)` | the displayed page, the scroll position of both areas and, without paging, the row the list is scrolled to |
+| `DatabaseGrid` | in addition the current table: its columns are what everything else refers to. The database has to be set beforehand |
+| `MemGrid` | nothing of its own – the records come from the application anyway |
+
+What comes out of the application's own code – data source, columns, colors, hooks, rows per
+page – is not part of the state: that is built anew anyway. Widths and the boundary share are
+kept as percentages of the total width and therefore suit the new orientation.
+`Grid.toStateJson()` and `Grid.state(String)` are the same thing without a bundle, for whoever
+wants to store the state elsewhere and outlive the death of the process as well. (Also used for
+testing.)
+
+Opened dialogues are not preserved, the column selection and the search close with the turn.
 
 ### Sorting
 

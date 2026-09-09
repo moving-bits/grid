@@ -1,5 +1,7 @@
 package com.movingbits.grid;
 
+import android.os.Bundle;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -322,6 +324,18 @@ public class MemGrid<T> extends Grid implements GridDataSource {
     @Override
     public MemGrid<T> configuration(final String json) {
         super.configuration(json);
+        return this;
+    }
+
+    @Override
+    public MemGrid<T> state(final String json) {
+        super.state(json);
+        return this;
+    }
+
+    @Override
+    public MemGrid<T> readState(final Bundle state) {
+        super.readState(state);
         return this;
     }
 

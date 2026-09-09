@@ -77,13 +77,22 @@ final class ScrollSync {
 
     /** Resets all participating views to the start. */
     void reset() {
-        if (scrollX == 0) {
+        moveTo(0);
+    }
+
+    /**
+     * Takes over a position from outside – out of a restored state, for instance – and moves
+     * every participating view along.
+     */
+    void moveTo(final int x) {
+        final int target = Math.max(0, x);
+        if (scrollX == target) {
             return;
         }
         applying = true;
-        scrollX = 0;
+        scrollX = target;
         for (int i = 0; i < views.size(); i++) {
-            views.get(i).applySyncedScrollX(0);
+            views.get(i).applySyncedScrollX(target);
         }
         applying = false;
         notifyListener();

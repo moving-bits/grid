@@ -11,6 +11,7 @@ import com.movingbits.grid.MemGrid;
 import com.movingbits.grid.SortCriterion;
 import com.movingbits.grid.SortDirection;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.core.graphics.Insets;
@@ -49,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String CONFIG_STRING_MOUNTAINS = "config_mountains";
     private static final String CONFIG_STRING_DATABASE = "config_database";
 
+    /** Key of the running demo within the stored state. */
+    private static final String STATE_DEMO = "demo";
+
     /**
      * Default configs
      */
@@ -76,22 +80,91 @@ public class MainActivity extends AppCompatActivity {
     private int accentColor;
     private Toast hint;
 
+    /** The demos on offer; the stored state names the one that is running. */
+    private enum Demo { CITIES, MOUNTAINS, DATABASE }
+
+    /** The demo currently on screen; {@code null} while the selection is showing. */
+    private Demo runningDemo;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         applyWindowInsets();
 
-        findViewById(R.id.demo_cities).setOnClickListener(view -> runDemo(initMemDemoCities()));
-        findViewById(R.id.demo_mountains).setOnClickListener(view -> runDemo(initMemDemoMountains()));
-        findViewById(R.id.demo_database).setOnClickListener(view -> runDemo(initDatabaseDemo()));
+        findViewById(R.id.demo_cities).setOnClickListener(view -> runDemo(Demo.CITIES, null));
+        findViewById(R.id.demo_mountains).setOnClickListener(view -> runDemo(Demo.MOUNTAINS, null));
+        findViewById(R.id.demo_database).setOnClickListener(view -> runDemo(Demo.DATABASE, null));
+
+        // After a change of screen orientation the demo carries on where it left off.
+        final Demo running = getDemoFrom(savedInstanceState);
+        if (running != null) {
+            runDemo(running, savedInstanceState);
+        }
     }
 
-    private void runDemo(final Grid grid) {
+    /**
+     * Stores which demo is running and lets the grid and its view add what they hold: the grid
+     * its configuration, the search and the data order, the view the page and the scroll
+     * positions.
+     */
+    @Override
+    protected void onSaveInstanceState(final Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (runningDemo == null) {
+            return;
+        }
+        outState.putString(STATE_DEMO, runningDemo.name());
+        grid().addState(outState);
+        gridView.addState(outState);
+    }
+
+    /**
+     * Releases the cursor of the database demo. Its grid is done for with this activity – and
+     * a change of screen orientation leaves a new one behind every time.
+     */
+    @Override
+    protected void onDestroy() {
+        if (databaseGrid != null) {
+            databaseGrid.close();
+        }
+        super.onDestroy();
+    }
+
+    /** The demo a stored state belongs to; {@code null} when there is none. */
+    private Demo getDemoFrom(final @Nullable Bundle state) {
+        final String name = state == null ? null : state.getString(STATE_DEMO);
+        for (Demo demo : Demo.values()) {
+            if (demo.name().equals(name)) {
+                return demo;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Builds a demo and shows it.
+     *
+     * <p>A state at hand goes to the grid before it is handed to the view: it settles the
+     * columns, their order and the data order. The state of the view itself follows right
+     * after, because it needs the grid.</p>
+     *
+     * @param state the stored state, or {@code null} for a fresh start
+     */
+    private void runDemo(final Demo demo, final Bundle state) {
+        runningDemo = demo;
+        final Grid grid = switch (demo) {
+            case CITIES -> initMemDemoCities();
+            case MOUNTAINS -> initMemDemoMountains();
+            case DATABASE -> initDatabaseDemo();
+        };
         databaseGrid = grid instanceof DatabaseGrid database ? database : null;
+        grid.readState(state);
+
         gridView = new GridView(this);
         gridView.setGrid(grid);
         ((FrameLayout) findViewById(R.id.grid_container)).addView(gridView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        gridView.readState(state);
         configureUI();
     }
 
@@ -149,7 +222,13 @@ public class MainActivity extends AppCompatActivity {
     private Grid initDatabaseDemo() {
         databaseGrid = new DatabaseGrid()
                 .setDatabase(DataStore.getDatabase(this))
-                .onTablesLoaded(tables -> findViewById(R.id.root).post(() -> showTableSelection(tables)))
+                // Posted, so that a restored table is already in place by then: after a
+                // change of screen orientation the selection would only be in the way.
+                .onTablesLoaded(tables -> findViewById(R.id.root).post(() -> {
+                    if (databaseGrid != null && !databaseGrid.hasCurrentTable()) {
+                        showTableSelection(tables);
+                    }
+                }))
                 .onConfigurationChanged(json -> {
                     storeConfiguration(databaseConfigKey(), json);
                     highlightButton(btColumConfig, grid().hasHiddenColumns());

@@ -1,5 +1,7 @@
 package com.movingbits.grid;
 
+import android.os.Bundle;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,6 +41,8 @@ public class Grid {
     public static final float MIN_FIXED_BOUNDARY_FRACTION = 0.15f;
     /** Largest share the boundary can be moved to. */
     public static final float MAX_FIXED_BOUNDARY_FRACTION = 0.6f;
+    /** Key the state is stored under in a bundle. */
+    private static final String STATE_GRID = "com.movingbits.grid.state";
 
     /** All defined columns in the order they were handed over. */
     private final List<GridColumn> allColumns = new ArrayList<>();
@@ -324,6 +328,44 @@ public class Grid {
         }
     }
 
+    /** The settled data order, or {@code null} while it is not settled yet. */
+    List<GridColumn> getFrozenDataColumns() {
+        return dataColumns;
+    }
+
+    /**
+     * Takes over a data order out of a stored state.
+     *
+     * <p>Unlike {@link #freezeDataOrder()} it overrides an order settled already: what the
+     * fields of a data row mean has to stay as it was, and the display order does not tell –
+     * moving and hiding columns leaves the data rows untouched. Names that no longer belong to
+     * any column fall away; columns the order does not know join at the back, just as columns
+     * added later do.</p>
+     *
+     * @param names names of the columns in data order; nothing happens without any
+     */
+    void applyDataOrder(final List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return;
+        }
+        final List<GridColumn> ordered = new ArrayList<>();
+        for (String name : names) {
+            final GridColumn column = findColumn(name);
+            if (column != null && layout.contains(column) && !ordered.contains(column)) {
+                ordered.add(column);
+            }
+        }
+        for (GridColumn column : layout) {
+            if (!ordered.contains(column)) {
+                ordered.add(column);
+            }
+        }
+        dataColumns = ordered;
+        for (int i = 0; i < dataColumns.size(); i++) {
+            dataColumns.get(i).setDataIndex(i);
+        }
+    }
+
     // -------------------------------------------------- Optional appearance
 
     /**
@@ -465,6 +507,65 @@ public class Grid {
      */
     public String toConfigurationJson() {
         return GridConfiguration.toJson(this);
+    }
+
+    // ---------------------------------------------------------------- State
+
+    /**
+     * Writes the grid's state into the bundle handed over – meant for
+     * {@code Activity.onSaveInstanceState}, so that a change of screen orientation does not
+     * throw the display back to the start. {@link #readState(Bundle)} takes it back.
+     *
+     * <p>The state holds more than the configuration object: the search as well, and the data
+     * order. What comes out of the application's own code – data source, columns, colors,
+     * hooks – is no part of it: that is built anew anyway. The view's own state, page and
+     * scroll position, is stored by {@code GridView.addState(Bundle)}.</p>
+     *
+     * <p>Several grids in one activity each need a bundle of their own, because they all store
+     * under the same key:</p>
+     *
+     * <pre>{@code
+     * Bundle state = new Bundle();
+     * grid.addState(state);
+     * outState.putBundle("left", state);
+     * }</pre>
+     */
+    public void addState(final Bundle outState) {
+        if (outState != null) {
+            outState.putString(STATE_GRID, toStateJson());
+        }
+    }
+
+    /**
+     * Takes the state back out of a bundle – the one handed to {@code Activity.onCreate} or to
+     * {@code onRestoreInstanceState}. A bundle without a state, {@code null} included, has no
+     * effect.
+     *
+     * <p>The call belongs at the end of the chain, after all {@code column(...)} calls and
+     * before the grid is handed to the view: it acts on the columns known at that point and
+     * settles the data order. A configuration object set beforehand is thereby replaced by the
+     * state, which is the more recent one.</p>
+     */
+    public Grid readState(final Bundle state) {
+        return state == null ? this : state(state.getString(STATE_GRID));
+    }
+
+    /**
+     * The current state as a JSON string – suitable for storing anywhere and setting again
+     * later through {@link #state(String)}. For the usual case, a change of screen
+     * orientation, {@link #addState(Bundle)} does the same with a bundle.
+     */
+    public String toStateJson() {
+        return GridState.toJson(this);
+    }
+
+    /**
+     * Takes over a state as a JSON string. As with the configuration object the evaluation is
+     * forgiving: a string that cannot be read has no effect.
+     */
+    public Grid state(final String json) {
+        GridState.apply(this, json);
+        return this;
     }
 
     /** All defined columns in the order handed over, including those not displayed. */
