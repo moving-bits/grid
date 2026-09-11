@@ -288,6 +288,12 @@ of their text appearance, which is what a theme intends; with it, a dark backgro
 readable. The colors are read while the view is built, so a different palette handed over
 afterwards takes effect on `GridView.refresh()`.
 
+### Translation
+
+Texts are defined in grid's `values\strings.xml` file. To add translations to your app, copy the
+contents of that file to your app's `string.xml` and let them be translated the same way as your
+app's other strings. Contents of your app's `string.xml` will override grid's original versions.
+
 ### The configuration object
 
 Display and sort order can be handed over and read back as a JSON string — that is how the

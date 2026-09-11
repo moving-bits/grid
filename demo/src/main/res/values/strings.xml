@@ -40,4 +40,14 @@
     <string name="delete">Delete</string>
     <string name="hint_row_deleted">Row deleted: %1$s</string>
     <string name="hint_row_not_deleted">Row %1$s could not be deleted</string>
+
+    <!-- override operator strings (for available strings see grid/strings.xml) -->
+    <!--
+    <string name="grid_operator_equals">equals</string>
+    <string name="grid_operator_not_equals">not equals</string>
+    <string name="grid_operator_less">less than</string>
+    <string name="grid_operator_less_or_equal">less than or equals</string>
+    <string name="grid_operator_greater">greater than</string>
+    <string name="grid_operator_greater_or_equal">greather than or equals</string>
+    -->
 </resources>
