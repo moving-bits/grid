@@ -35,4 +35,9 @@
     <string name="hint_table_selected">Table %1$s</string>
     <string name="hint_cell_saved">%1$s saved</string>
     <string name="hint_cell_not_saved">%1$s could not be saved</string>
+    <string name="delete_row">Delete row</string>
+    <string name="delete_row_question">Delete the row %1$s for good?</string>
+    <string name="delete">Delete</string>
+    <string name="hint_row_deleted">Row deleted: %1$s</string>
+    <string name="hint_row_not_deleted">Row %1$s could not be deleted</string>
 </resources>

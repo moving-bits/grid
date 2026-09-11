@@ -9,7 +9,9 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
@@ -63,6 +65,8 @@ public class DatabaseGrid extends Grid implements GridDataSource {
 
     private final List<String> tables = new ArrayList<>();
     private OnTablesLoadedListener tablesLoadedListener;
+    private OnRowActionListener rowActionListener;
+    private OnRowActionPerformedListener rowActionPerformedListener;
 
     private float textWidthDp = DEFAULT_TEXT_WIDTH_DP;
     private float numberWidthDp = DEFAULT_NUMBER_WIDTH_DP;
@@ -195,6 +199,26 @@ public class DatabaseGrid extends Grid implements GridDataSource {
     public DatabaseGrid onTablesLoaded(final OnTablesLoadedListener listener) {
         this.tablesLoadedListener = listener;
         notifyTablesLoaded();
+        return this;
+    }
+
+    /**
+     * Hook that decides what a long tap on the number of a row does - deleting it, for now.
+     *
+     * <p>Without it the number column stays what it has always been: a running number nobody
+     * can tap. It only takes effect on a table that carries a primary key.</p>
+     */
+    public DatabaseGrid onRowAction(final OnRowActionListener listener) {
+        this.rowActionListener = listener;
+        return this;
+    }
+
+    /**
+     * Hook for an action that has been carried out on a row, so that the application can log
+     * it. It reports the same thing the deciding hook was asked about.
+     */
+    public DatabaseGrid onRowActionPerformed(final OnRowActionPerformedListener listener) {
+        this.rowActionPerformedListener = listener;
         return this;
     }
 
@@ -510,22 +534,16 @@ public class DatabaseGrid extends Grid implements GridDataSource {
             return false;
         }
 
-        final Cursor rows = cursorFor(getSortJson(), getSearchJson());
-        if (rows == null || !rows.moveToPosition(row)) {
+        final Map<String, String> key = primaryKeyOf(row);
+        if (key == null) {
             return false;
         }
 
+        final List<String> keyValues = new ArrayList<>();
+        final String where = keyClause(key, keyValues);
         final List<Object> args = new ArrayList<>();
         args.add(valueOf(target, newValue));
-        final StringBuilder where = new StringBuilder();
-        for (ColumnInfo key : tableInfo.primaryKey()) {
-            final int index = rows.getColumnIndex(key.name);
-            if (index < 0) {
-                return false;
-            }
-            where.append(where.length() == 0 ? "" : " AND ").append(quote(key.name)).append(" = ?");
-            args.add(rows.getString(index));
-        }
+        args.addAll(keyValues);
 
         final String sql = "UPDATE " + quote(currentTable) + " SET " + quote(target.name) + " = ? WHERE " + where;
         try {
@@ -538,6 +556,181 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         // The open cursor still carries the old content; the next page is queried anew.
         closeCursor();
         return true;
+    }
+
+    // ---------------------------------------------------- Actions on a row
+
+    /**
+     * {@code true} as soon as a long tap on the number of a row means something: the table
+     * carries a primary key, so a row can be addressed, and the application has said what is
+     * to happen.
+     */
+    @Override
+    boolean hasRowActions() {
+        return rowActionListener != null && hasCurrentTable() && tableInfo.hasPrimaryKey;
+    }
+
+    /**
+     * Tells the application that a row is to be dealt with. Nothing happens here yet - the
+     * application answers whenever it is ready, through {@link #performRowAction(int, Map)}.
+     *
+     * @param rowIndex 0-based index of the row within the displayed data set
+     */
+    @Override
+    void requestRowAction(final int rowIndex) {
+        if (!hasRowActions()) {
+            return;
+        }
+        final Map<String, String> key = primaryKeyOf(rowIndex);
+        if (key != null) {
+            rowActionListener.onRowAction(OnRowActionListener.DELETE, key, otherColumnsOf(rowIndex));
+        }
+    }
+
+    /**
+     * Carries out what the application has decided on - the answer to
+     * {@link OnRowActionListener}, whenever it comes.
+     *
+     * <p>The parameters are checked first: the action has to be one the grid knows, and the
+     * key has to address a row of the current table - one value per field of its primary key.
+     * Only then is the row deleted. What became of it goes to
+     * {@link #onRowActionPerformed(OnRowActionPerformedListener)} in either case, and a row
+     * that is gone has the display fetched anew.</p>
+     *
+     * <p>The row is addressed by its key, so it stays the right one however long the
+     * application took to decide and whatever was paged or sorted in the meantime.</p>
+     *
+     * @param type what is to happen; {@link OnRowActionListener#DELETE} for now
+     * @param key  the row's primary key, as {@link OnRowActionListener} handed it over
+     * @return {@code true} when the row was deleted
+     */
+    public boolean performRowAction(final int type, final Map<String, String> key) {
+        final boolean done = type == OnRowActionListener.DELETE && addressesRow(key) && deleteRow(key);
+        if (rowActionPerformedListener != null) {
+            rowActionPerformedListener.onRowActionPerformed(type, key, done);
+        }
+        if (done) {
+            notifyDataChanged();
+        }
+        return done;
+    }
+
+    /**
+     * {@code true} when this key addresses a row of the current table: one value for every
+     * field of its primary key and nothing besides.
+     */
+    private boolean addressesRow(final Map<String, String> key) {
+        if (!hasCurrentTable() || !tableInfo.hasPrimaryKey || key == null) {
+            return false;
+        }
+        final List<ColumnInfo> fields = tableInfo.primaryKey();
+        if (key.size() != fields.size()) {
+            return false;
+        }
+        for (ColumnInfo field : fields) {
+            if (!key.containsKey(field.name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Deletes the row this primary key addresses. */
+    private boolean deleteRow(final Map<String, String> key) {
+        final List<String> values = new ArrayList<>();
+        final String where = keyClause(key, values);
+        final int deleted;
+        try {
+            deleted = database.delete(quote(currentTable), where, values.toArray(new String[0]));
+        } catch (SQLiteException notDeletable) {
+            Log.w(LOGTAG, "deleting failed: " + notDeletable.getMessage() + " - " + currentTable);
+            return false;
+        }
+        if (deleted == 0) {
+            // The row was gone already; nothing happened, so nothing is reported either.
+            Log.w(LOGTAG, "no row deleted in " + currentTable);
+            return false;
+        }
+        // The open cursor still carries the row; the next page is queried anew.
+        closeCursor();
+        return true;
+    }
+
+    /**
+     * The primary key of a displayed row: one entry per field of the key, name and value, in
+     * the order of the key itself.
+     *
+     * @param row 0-based index of the row within the displayed data set, as a {@link CellRef}
+     *            names it
+     * @return the key, or {@code null} when the row cannot be addressed
+     */
+    protected Map<String, String> primaryKeyOf(final int row) {
+        if (!hasCurrentTable() || !tableInfo.hasPrimaryKey) {
+            return null;
+        }
+        final Cursor rows = cursorFor(getSortJson(), getSearchJson());
+        if (rows == null || !rows.moveToPosition(row)) {
+            return null;
+        }
+        final Map<String, String> key = new LinkedHashMap<>();
+        for (ColumnInfo field : tableInfo.primaryKey()) {
+            final int index = rows.getColumnIndex(field.name);
+            if (index < 0) {
+                return null;
+            }
+            key.put(field.name, rows.getString(index));
+        }
+        return Collections.unmodifiableMap(key);
+    }
+
+    /**
+     * The fields of a displayed row that are no part of its primary key: name and value as
+     * text, as they stand on the screen - in display order and without the hidden ones.
+     *
+     * <p>The key alone says little to whoever is asked whether a row may go; these are the
+     * values a question is built from, and it should show what the user is looking at. They
+     * are read as the cells read them, so what cannot be shown as text is named instead.</p>
+     *
+     * @param row 0-based index of the row within the displayed data set
+     * @return the fields, empty when they cannot be read
+     */
+    protected Map<String, String> otherColumnsOf(final int row) {
+        if (!hasCurrentTable()) {
+            return Collections.emptyMap();
+        }
+        final Cursor rows = cursorFor(getSortJson(), getSearchJson());
+        if (rows == null || !rows.moveToPosition(row)) {
+            return Collections.emptyMap();
+        }
+        final Map<String, String> columns = new LinkedHashMap<>();
+        for (GridColumn column : getColumns()) {
+            final ColumnInfo field = infoOf(column.getName());
+            if (field == null || field.isPrimaryKey()) {
+                // The key has been handed over already, and a column of no field of the table
+                // has no value to hand over at all.
+                continue;
+            }
+            final int index = rows.getColumnIndex(field.name);
+            if (index >= 0) {
+                columns.put(field.name, textOf(rows, index));
+            }
+        }
+        return Collections.unmodifiableMap(columns);
+    }
+
+    /**
+     * The condition that addresses one row through its primary key.
+     *
+     * @param values receives the values in the order in which the condition asks for them
+     * @return the condition without its {@code WHERE}
+     */
+    private static String keyClause(final Map<String, String> key, final List<String> values) {
+        final StringBuilder where = new StringBuilder();
+        for (Map.Entry<String, String> field : key.entrySet()) {
+            where.append(where.length() == 0 ? "" : " AND ").append(quote(field.getKey())).append(" = ?");
+            values.add(field.getValue());
+        }
+        return where.toString();
     }
 
     /** The value to store, matching the column's storage form. */

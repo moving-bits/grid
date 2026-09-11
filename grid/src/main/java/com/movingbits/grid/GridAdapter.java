@@ -20,6 +20,8 @@ final class GridAdapter extends RecyclerView.Adapter<GridAdapter.RowHolder> {
 
     private GridMetrics metrics;
     private int[] rowHeights;
+    /** Hook for a long tap on a row's number; without one the number reacts to nothing. */
+    private GridRowView.NumberTapListener numberTapListener;
     private int page;
     private String[][] rows = NO_ROWS;
 
@@ -27,6 +29,11 @@ final class GridAdapter extends RecyclerView.Adapter<GridAdapter.RowHolder> {
         this.grid = grid;
         this.fixedSync = fixedSync;
         this.bodySync = bodySync;
+    }
+
+    /** Sets the hook for a long tap on the number of a row, before the rows are created. */
+    void setNumberTapListener(final GridRowView.NumberTapListener listener) {
+        this.numberTapListener = listener;
     }
 
     /** Takes over freshly computed widths and rebuilds the visible rows. */
@@ -79,6 +86,9 @@ final class GridAdapter extends RecyclerView.Adapter<GridAdapter.RowHolder> {
     @Override
     public RowHolder onCreateViewHolder(final @NonNull ViewGroup parent, final int viewType) {
         GridRowView row = new GridRowView(parent.getContext(), grid, false, fixedSync, bodySync, null);
+        if (grid.hasRowActions()) {
+            row.setNumberTapListener(numberTapListener);
+        }
         final RowHolder holder = new RowHolder(row);
         // On a tap the row asks the list for its index instead of trusting the value it
         // remembered when it was bound.

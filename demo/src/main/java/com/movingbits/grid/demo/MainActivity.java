@@ -8,10 +8,12 @@ import com.movingbits.grid.GridColumn;
 import com.movingbits.grid.GridView;
 import com.movingbits.grid.MemColumn;
 import com.movingbits.grid.MemGrid;
+import com.movingbits.grid.OnRowActionListener;
 import com.movingbits.grid.SortCriterion;
 import com.movingbits.grid.SortDirection;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.core.graphics.Insets;
@@ -22,8 +24,10 @@ import androidx.core.widget.TextViewCompat;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.InputType;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
@@ -31,6 +35,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
+import java.util.Map;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
@@ -41,6 +46,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
  * Demo app with two fixed columns, 10 rows per page
  */
 public class MainActivity extends AppCompatActivity {
+
+    private static final String LOGTAG = "GridDemo";
 
     private static final int ROWS_PER_PAGE = 10;
 
@@ -238,6 +245,11 @@ public class MainActivity extends AppCompatActivity {
                 .alternatingRowColors(true)
                 .adjustableFixedBoundary(true)
                 .onFixedBoundaryChanged(percent -> showHint(getString(R.string.hint_boundary, Math.round(percent * 100))))
+                .onRowAction(this::askDeleteRow)
+                .onRowActionPerformed((type, key, success) -> {
+                    Log.i(LOGTAG, "row action " + type + " on " + keyText(key) + ": " + success);
+                    showHint(getString(success ? R.string.hint_row_deleted : R.string.hint_row_not_deleted, keyText(key)));
+                })
                 .onCellLongClick(this::showCell)
                 .onSortChanged(order -> showHint(addSortIndicator(order)))
                 .onHeaderLongClick(column -> showHint(getString(R.string.hint_title_long, column + 1)));
@@ -276,6 +288,43 @@ public class MainActivity extends AppCompatActivity {
     /** each table has an individual config key */
     private String databaseConfigKey() {
         return CONFIG_STRING_DATABASE + "_" + (databaseGrid == null ? "" : databaseGrid.getCurrentTable());
+    }
+
+    // ------------------------------------------------------------ row action
+
+    /**
+     * A long tap on a row's number asks first. The grid waits for nothing; only the answer to
+     * the question hands the matter back to it, with the very parameters it reported.
+     */
+    private void askDeleteRow(final int type, final Map<String, String> key, final Map<String, String> columns) {
+        if (type != OnRowActionListener.DELETE || databaseGrid == null || key.isEmpty()) {
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.delete_row)
+                // The key names the row, the other columns show which one it is.
+                .setMessage(getString(R.string.delete_row_question, keyText(key)) + "\n\n" + columnsText(columns))
+                .setPositiveButton(R.string.delete, (dialog, which) -> databaseGrid.performRowAction(type, key))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** The rest of the row, one field per line, for the question. */
+    private static String columnsText(final Map<String, String> columns) {
+        final StringBuilder text = new StringBuilder();
+        for (Map.Entry<String, String> field : columns.entrySet()) {
+            text.append(text.length() == 0 ? "" : "\n").append(field.getKey()).append(": ").append(field.getValue());
+        }
+        return text.toString();
+    }
+
+    /** The primary key as one line, for the hint and the log. */
+    private static String keyText(final Map<String, String> key) {
+        final StringBuilder text = new StringBuilder();
+        for (Map.Entry<String, String> field : key.entrySet()) {
+            text.append(text.length() == 0 ? "" : ", ").append(field.getKey()).append("=").append(field.getValue());
+        }
+        return text.toString();
     }
 
     // ---------------------------------------------------------- cell dialogs
@@ -324,14 +373,20 @@ public class MainActivity extends AppCompatActivity {
         }
         input.setText(text);
         input.setSelection(input.getText().length());
+        // The dialog is opened to type in it, so the field takes the focus and the keyboard
+        // comes up with it.
+        input.requestFocus();
 
-        new MaterialAlertDialogBuilder(this)
+        final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(column.getTitle())
                 .setView(addDialogPadding(input))
-                .setPositiveButton(android.R.string.ok,
-                        (dialog, which) -> saveCell(column, rowIndex, input.getText().toString()))
+                .setPositiveButton(android.R.string.ok, (ok, which) -> saveCell(column, rowIndex, input.getText().toString()))
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        }
+        dialog.show();
     }
 
     private int inputTypeOf(final ColumnType type) {

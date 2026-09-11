@@ -166,6 +166,9 @@ public class GridView extends FrameLayout {
             throw new IllegalArgumentException("grid must not be null");
         }
         this.grid = grid;
+        // Whatever the grid changes about the data itself - a record deleted through it, for
+        // instance - must not stay on screen.
+        grid.setDataChangedListener(this::refresh);
         this.currentPage = 0;
         this.pageRows = NO_ROWS;
         this.restoreTopRow = -1;
@@ -331,6 +334,19 @@ public class GridView extends FrameLayout {
         post(() -> layoutManager.scrollToPositionWithOffset(row, offset));
     }
 
+    // ---------------------------------------------------- Actions on a row
+
+    /**
+     * A long tap on the number of a row. It only reports; what becomes of it is settled
+     * between the grid and the application, and may take as long as a question put to the user
+     * does. Should a record fall away in the end, the grid says so and the display follows.
+     */
+    private void onNumberLongTapped(final int rowIndex) {
+        if (grid != null) {
+            grid.requestRowAction(rowIndex);
+        }
+    }
+
     // -------------------------------------------------------------- Sorting
 
     /**
@@ -418,6 +434,7 @@ public class GridView extends FrameLayout {
 
         currentPage = Math.max(0, Math.min(currentPage, getPageCount() - 1));
         adapter = new GridAdapter(grid, fixedSync, bodySync);
+        adapter.setNumberTapListener(this::onNumberLongTapped);
         // The rows fetched last stay valid: reordering and hiding columns only change the
         // display, not the data rows.
         adapter.setPage(currentPage, pageRows);

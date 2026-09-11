@@ -120,6 +120,30 @@ key – without one the row could not be addressed unambiguously – and a colum
 protection; otherwise the call returns `false`. The library brings no input mask along, that is
 the application's job (see the demo).
 
+**Deleting a row** is offered by long-tap on the number column, and can only be triggered if
+the table has a primary key (so that the row can be addressed) and the application has
+hooked into it:
+
+```java
+grid.onRowAction((type, key, columns) -> {
+            // type is OnRowActionListener.DELETE; key carries one entry per field of the
+            // primary key, columns the rest of the row as it is on display, ready to be shown
+            askTheUser(columns, () -> grid.performRowAction(type, key));   // whenever it comes
+        })
+        .onRowActionPerformed((type, key, success) -> log(type, key, success));
+```
+
+The long press just reports to the calling application. Along with the key it hands over the
+rest of the row as it is on display – in display order and without the hidden columns – so that
+a question put to the user can name the record instead of its number. That can perform any
+check it wants and needs to call `performRowAction(type, key)` to trigger deletion:
+
+`performRowAction(type, key)` checks its parameters first – a known action, and a key that
+addresses a row of the current table with one value per field of its primary key – then deletes
+the row and finally reports through `onRowActionPerformed`. That hook hears of every call, and
+`success` tells whether the row is really gone; what the application turned down beforehand
+never reaches the grid. After a deletion the display is fetched anew by itself.
+
 ### Configuration
 
 | Method                          | Effect                                                          |
@@ -143,6 +167,7 @@ the application's job (see the demo).
 | `onFixedBoundaryChanged`        | hook for a boundary moved by the user                           |
 | `search(List&lt;SearchRequest&gt;)`   | set search conditions; transient, not in the configuration object |
 | `onSearchChanged`               | hook for a changed search                                       |
+| `onRowAction` / `onRowActionPerformed` | delete a row by a long tap on its number (`DatabaseGrid`)  |
 | `onCellClick` / `onCellLongClick`     | hook for a short / long tap on a data cell                 |
 | `onItemClick` / `onItemLongClick`     | the same with the record instead of the row of texts (`MemGrid`) |
 | `onHeaderClick` / `onHeaderLongClick` | hook for a short / long tap on a header cell               |
@@ -155,7 +180,8 @@ Column widths: `ColumnWidth.dp(x)`, `ColumnWidth.percent(0..1)` or – as the de
 * **The header row** is fixed to the top edge and scrolls horizontally along with the data.
 * **The number column** on the far left shows the running number within the whole data set
   (1-based, so on page 2 the numbers 11–20). It is always fixed and only as wide as the highest
-  number that occurs requires. Deliberately without a tap hook.
+  number that occurs requires. A short tap does nothing; a long press deletes the row where a
+  `DatabaseGrid` allows it (see [Databases](#databases-databasegrid)).
 * **Column widths**: fixed and percentage values are handed out first, the remaining width is
   split evenly across the columns without a value. Percentages refer to the total width
   including the number column. If the sum exceeds the available width, the grid scrolls

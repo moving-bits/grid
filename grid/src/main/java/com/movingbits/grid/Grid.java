@@ -90,6 +90,8 @@ public class Grid {
     private OnSortChangedListener sortChangedListener;
     private OnSearchChangedListener searchChangedListener;
     private OnConfigurationChangedListener configurationChangedListener;
+    /** What the view hangs its refresh on; set when the grid is handed to a view. */
+    private Runnable dataChangedListener;
 
     /** Creates a grid without a data source; it is set through {@link #data(GridDataSource)}. */
     public Grid() {
@@ -827,6 +829,42 @@ public class Grid {
     public Grid onSearchChanged(final OnSearchChangedListener listener) {
         this.searchChangedListener = listener;
         return this;
+    }
+
+    // ---------------------------------------------------- Actions on a row
+
+    /**
+     * {@code true} when a long tap on the number of a row is to do something. Only a grid that
+     * can address its rows says so - a {@link DatabaseGrid} whose table carries a primary key
+     * and whose application has hooked into it.
+     */
+    boolean hasRowActions() {
+        return false;
+    }
+
+    /**
+     * Reports a long tap on the number of a row to the application. What becomes of it is up
+     * to the application, which may take its time over it; here nothing happens yet.
+     *
+     * @param rowIndex 0-based index of the row within the displayed data set
+     */
+    void requestRowAction(final int rowIndex) {
+            // nothing to ask about; only a DatabaseGrid can address its rows
+    }
+
+    /**
+     * Sets what is to happen when the grid changes the data itself. The view hangs its
+     * refresh on it, so that a record deleted through the grid does not stay on screen.
+     */
+    void setDataChangedListener(final Runnable listener) {
+        this.dataChangedListener = listener;
+    }
+
+    /** Reports that the data has changed under the display. */
+    protected void notifyDataChanged() {
+        if (dataChangedListener != null) {
+            dataChangedListener.run();
+        }
     }
 
     // -------------------------------------------------------------- Queries

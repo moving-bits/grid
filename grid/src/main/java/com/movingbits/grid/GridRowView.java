@@ -50,6 +50,14 @@ final class GridRowView extends LinearLayout {
         int currentRowIndex();
     }
 
+    /**
+     * Reports a long tap on the number of a data row. Acting on it is the GridView's job: what
+     * follows may change the data, and the display then has to be built anew.
+     */
+    interface NumberTapListener {
+        void onNumberLongTapped(int rowIndex);
+    }
+
     private final Grid grid;
     private final boolean header;
     private final HeaderTapListener headerTapListener;
@@ -282,9 +290,33 @@ final class GridRowView extends LinearLayout {
         this.rowIndexProvider = provider;
     }
 
-    private void notifyCellHook(final OnCellClickListener listener, final int columnIndex) {
+    /**
+     * Hooks a long tap on the number of this row, which otherwise reacts to nothing. Only the
+     * data rows have a number to tap.
+     */
+    void setNumberTapListener(final NumberTapListener listener) {
+        if (header || listener == null) {
+            return;
+        }
+        numberCell.setOnLongClickListener(view -> {
+            final int rowIndex = currentRowIndex();
+            if (rowIndex >= 0) {
+                listener.onNumberLongTapped(rowIndex);
+            }
+            return true;
+        });
+        GridStyle.applyTouchFeedback(numberCell);
+    }
+
+    /** The index of the record on display, or -1 when the row stands at no record. */
+    private int currentRowIndex() {
         final int rowIndex = rowIndexProvider != null ? rowIndexProvider.currentRowIndex() : boundRowIndex;
-        if (rowIndex < 0 || rowIndex >= grid.getRowCount() || columnIndex < 0 || columnIndex >= grid.getColumnCount()) {
+        return rowIndex >= 0 && rowIndex < grid.getRowCount() ? rowIndex : -1;
+    }
+
+    private void notifyCellHook(final OnCellClickListener listener, final int columnIndex) {
+        final int rowIndex = currentRowIndex();
+        if (rowIndex < 0 || columnIndex < 0 || columnIndex >= grid.getColumnCount()) {
             return;
         }
         final GridColumn column = grid.getColumn(columnIndex);
