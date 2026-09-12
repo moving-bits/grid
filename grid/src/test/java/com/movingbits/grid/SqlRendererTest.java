@@ -26,6 +26,16 @@ public class SqlRendererTest {
     }
 
     @Test
+    public void withoutAChosenColumnEverythingIsAskedFor() {
+        SqlStatement statement = new SqlStatement();
+        statement.setTable("cities");
+        assertEquals("SELECT * FROM \"cities\"", statement.render().sql());
+
+        statement.setDistinct(true);
+        assertEquals("SELECT DISTINCT * FROM \"cities\"", statement.render().sql());
+    }
+
+    @Test
     public void theStarStaysWithoutAName() {
         SqlStatement statement = new SqlStatement();
         statement.setTable("cities");

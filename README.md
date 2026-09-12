@@ -186,7 +186,7 @@ taken over before "Run"; the editor works on a copy.
 | Clause | What it holds |
 |--------|---------------|
 | Query / Change | `SELECT` or `UPDATE`; there is deliberately no `DELETE` and nothing that changes the schema |
-| Columns of the result | a block per column, each carrying a name of its own; also `*` for all columns of the table |
+| Columns of the result | a block per column, each carrying a name of its own; also `*` for all columns of the table. Left empty, the statement asks for every column just the same |
 | Table | the table read from or changed, and the tables joined to it (`JOIN`, `LEFT JOIN`) with their `ON` condition |
 | Change to | which column of the table receives which value (`UPDATE` only) |
 | Condition | `WHERE`: conditions that apply together with `AND` or `OR`, and groups of their own for the other way round |

@@ -110,6 +110,17 @@ public final class SqlStatement {
         return tables;
     }
 
+    /**
+     * {@code true} when a query shows every column of its table, because none was chosen.
+     *
+     * <p>An empty row of columns is no half-finished statement: it asks for everything, just
+     * as a chosen {@code *} would, and can be run as it stands. The editor leaves the row
+     * empty all the same - there is no block to show that nothing was chosen.</p>
+     */
+    public boolean showsEveryColumn() {
+        return kind == SqlKind.SELECT && projection.isEmpty();
+    }
+
     /** {@code true} when one of the result columns is an aggregate. */
     public boolean hasAggregates() {
         for (SqlProjection column : projection) {

@@ -33,6 +33,11 @@ final class SqlRenderer {
             text.append("DISTINCT ");
         }
         final List<SqlProjection> projection = statement.getProjection();
+        if (projection.isEmpty()) {
+            // Nothing chosen asks for everything, so that the statement holds together and
+            // could be run as it stands.
+            text.append("*");
+        }
         for (int i = 0; i < projection.size(); i++) {
             final SqlProjection column = projection.get(i);
             text.append(i == 0 ? "" : ", ");

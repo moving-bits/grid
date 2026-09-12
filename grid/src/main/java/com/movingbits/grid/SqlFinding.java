@@ -10,8 +10,6 @@ public enum SqlFinding {
 
     /** No table chosen; without one there is nothing to read or change. */
     NO_TABLE(R.string.grid_sql_finding_no_table),
-    /** No column of the result chosen. */
-    NO_COLUMNS(R.string.grid_sql_finding_no_columns),
     /** An {@code UPDATE} without a single assignment. */
     NO_ASSIGNMENTS(R.string.grid_sql_finding_no_assignments),
     /** A column of the result carries no name, or two of them carry the same. */

@@ -39,7 +39,6 @@
 
     <!-- sql editor: what keeps a statement from being run -->
     <string name="grid_sql_finding_no_table">Choose a table.</string>
-    <string name="grid_sql_finding_no_columns">Choose at least one column for the result.</string>
     <string name="grid_sql_finding_no_assignments">Choose at least one column to change.</string>
     <string name="grid_sql_finding_alias_missing">Every column of the result needs a name.</string>
     <string name="grid_sql_finding_alias_duplicate">Two columns of the result carry the same name.</string>

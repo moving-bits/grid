@@ -35,10 +35,23 @@ public class SqlValidationTest {
     }
 
     @Test
-    public void withoutATableOrColumnsNothingRuns() {
+    public void withoutATableNothingRuns() {
         assertFinding(SqlFinding.NO_TABLE, new SqlStatement());
-        assertFinding(SqlFinding.NO_COLUMNS, new SqlStatement());
         assertFinding(SqlFinding.NO_TABLE, null);
+    }
+
+    @Test
+    public void withoutAChosenColumnTheQueryAsksForEveryOne() {
+        SqlStatement statement = new SqlStatement();
+        statement.setTable("cities");
+
+        assertEquals(Collections.emptyList(), check(statement));
+
+        // Two tables would answer with columns of the same name, so that one needs choosing.
+        statement.getJoins().add(new SqlJoin(SqlJoinType.INNER, "mountains",
+                Collections.singletonList(new SqlComparison(
+                        column("cities", "country"), SqlOperator.EQUALS, column("mountains", "country")))));
+        assertFinding(SqlFinding.STAR_WITH_JOIN, statement);
     }
 
     @Test

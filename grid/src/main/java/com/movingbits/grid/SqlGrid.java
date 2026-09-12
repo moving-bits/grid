@@ -162,6 +162,11 @@ public class SqlGrid extends DatabaseGrid implements SqlColumnTypes {
      * sorted as numbers. {@code *} stands in for the columns of the table.</p>
      */
     private void buildResultColumns() {
+        if (query.showsEveryColumn()) {
+            // Nothing chosen asks for every column of the table, as a chosen star does.
+            addTableColumns(query.getTable());
+            return;
+        }
         for (SqlProjection column : query.getProjection()) {
             if (column.isStar()) {
                 addTableColumns(query.getTable());

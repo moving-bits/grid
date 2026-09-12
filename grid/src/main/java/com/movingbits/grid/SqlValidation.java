@@ -66,8 +66,10 @@ public final class SqlValidation {
 
     private static void checkSelect(final SqlStatement statement, final Set<SqlFinding> findings) {
         final List<SqlProjection> projection = statement.getProjection();
-        if (projection.isEmpty()) {
-            findings.add(SqlFinding.NO_COLUMNS);
+        // An empty row of columns asks for every one of them, which only works as long as one
+        // table answers: two of them would deliver columns of the same name.
+        if (statement.showsEveryColumn() && !statement.getJoins().isEmpty()) {
+            findings.add(SqlFinding.STAR_WITH_JOIN);
         }
 
         for (SqlJoin join : statement.getJoins()) {
