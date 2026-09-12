@@ -59,6 +59,7 @@
     <!-- sql editor: the dialog itself -->
     <string name="grid_sql_title">SQL Editor</string>
     <string name="grid_sql_run">Run</string>
+    <string name="grid_sql_copy">Copy the statement</string>
     <string name="grid_sql_load">Load a stored statement</string>
     <string name="grid_sql_save">Store this statement</string>
     <string name="grid_sql_kind_select">Query</string>

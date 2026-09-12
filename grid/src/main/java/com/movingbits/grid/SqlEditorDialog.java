@@ -1,8 +1,11 @@
 package com.movingbits.grid;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -10,6 +13,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatCheckBox;
@@ -112,7 +116,10 @@ final class SqlEditorDialog implements SqlSnippetTarget {
         preview = SqlEditorViews.note(context);
         preview.setTypeface(Typeface.MONOSPACE);
         preview.setPadding(0, SqlEditorViews.padding(context), 0, 0);
-        content.addView(preview);
+        final LinearLayout previewRow = SqlEditorViews.row(context);
+        previewRow.addView(preview, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        previewRow.addView(SqlEditorViews.iconButton(context, R.drawable.grid_ic_copy, R.string.grid_sql_copy, this::copyStatement));
+        content.addView(previewRow);
         finding = SqlEditorViews.note(context);
         content.addView(finding);
 
@@ -147,6 +154,18 @@ final class SqlEditorDialog implements SqlSnippetTarget {
     }
 
     /**
+     * Puts the statement into the clipboard, word for word as it stands in the preview: the
+     * values are those of a prepared statement and stay the question marks they are.
+     */
+    private void copyStatement() {
+        final ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard == null) {
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.grid_sql_title), statement.render().sql()));
+    }
+
+    /**
      * The title of the dialog with the two buttons for stored statements on its right. Each
      * only appears where the application has said what to do with it.
      */
@@ -156,23 +175,17 @@ final class SqlEditorDialog implements SqlSnippetTarget {
         row.setPadding(padding, padding, padding / 2, 0);
 
         final TextView title = new TextView(context);
-        TextViewCompat.setTextAppearance(title,
-                com.google.android.material.R.style.TextAppearance_MaterialComponents_Headline6);
+        TextViewCompat.setTextAppearance(title, com.google.android.material.R.style.TextAppearance_MaterialComponents_Headline6);
         title.setText(R.string.grid_sql_title);
         row.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        // A little air between them: two icons side by side are easily mistaken for each
-        // other under a thumb.
-        final LinearLayout.LayoutParams spaced = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        final LinearLayout.LayoutParams spaced = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         spaced.setMarginStart(GridStyle.dp(context, 12f));
         if (grid.getSnippetLoadListener() != null) {
-            row.addView(SqlEditorViews.iconButton(context, R.drawable.grid_ic_open,
-                    R.string.grid_sql_load, this::loadSnippet), spaced);
+            row.addView(SqlEditorViews.iconButton(context, R.drawable.grid_ic_open, R.string.grid_sql_load, this::loadSnippet), spaced);
         }
         if (grid.getSnippetSaveListener() != null) {
-            row.addView(SqlEditorViews.iconButton(context, R.drawable.grid_ic_save,
-                    R.string.grid_sql_save, this::saveSnippet), spaced);
+            row.addView(SqlEditorViews.iconButton(context, R.drawable.grid_ic_save, R.string.grid_sql_save, this::saveSnippet), spaced);
         }
         return row;
     }
@@ -216,8 +229,7 @@ final class SqlEditorDialog implements SqlSnippetTarget {
         section.setPadding(0, SqlEditorViews.padding(context), 0, 0);
         section.addView(SqlEditorViews.title(context, titleRes));
         section.addView(chips);
-        content.addView(section, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        content.addView(section, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return section;
     }
 
@@ -245,8 +257,7 @@ final class SqlEditorDialog implements SqlSnippetTarget {
             statement.setDistinct(checked);
             refresh();
         });
-        final LinearLayout.LayoutParams beside = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        final LinearLayout.LayoutParams beside = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         beside.setMarginStart(GridStyle.dp(context, 16f));
         row.addView(distinct, beside);
         return row;
@@ -269,18 +280,13 @@ final class SqlEditorDialog implements SqlSnippetTarget {
         fillAssignments();
         fillGroupBy();
         fillOrderBy();
-        SqlConditionDialog.fillGroup(context, grid, statement, statement.getWhere(), whereChips,
-                false, this::refresh);
-        SqlConditionDialog.fillGroup(context, grid, statement, statement.getHaving(), havingChips,
-                true, this::refresh);
+        SqlConditionDialog.fillGroup(context, grid, statement, statement.getWhere(), whereChips, false, this::refresh);
+        SqlConditionDialog.fillGroup(context, grid, statement, statement.getHaving(), havingChips, true, this::refresh);
 
         preview.setText(statement.render().sql());
         final List<SqlFinding> findings = grid.validate(statement);
-        finding.setText(findings.isEmpty()
-                ? context.getString(R.string.grid_sql_valid)
-                : context.getString(findings.get(0).getLabelRes()));
-        finding.setTextColor(findings.isEmpty()
-                ? GridStyle.themeOnSurface(finding) : GridStyle.themeAccent(finding));
+        finding.setText(findings.isEmpty() ? context.getString(R.string.grid_sql_valid) : context.getString(findings.get(0).getLabelRes()));
+        finding.setTextColor(findings.isEmpty() ? GridStyle.themeOnSurface(finding) : GridStyle.themeAccent(finding));
         if (dialog != null && dialog.getButton(DialogInterface.BUTTON_POSITIVE) != null) {
             dialog.getButton(DialogInterface.BUTTON_POSITIVE).setEnabled(findings.isEmpty());
         }
@@ -359,8 +365,7 @@ final class SqlEditorDialog implements SqlSnippetTarget {
         }
         setChips.addView(SqlEditorViews.addChip(context, () -> {
             final List<String> columns = grid.getColumnNames(statement.getTable());
-            SqlEditorViews.choose(context, R.string.grid_sql_choose_column, columns,
-                    which -> chooseValue(columns.get(which), -1));
+            SqlEditorViews.choose(context, R.string.grid_sql_choose_column, columns, which -> chooseValue(columns.get(which), -1));
         }));
     }
 
@@ -392,9 +397,7 @@ final class SqlEditorDialog implements SqlSnippetTarget {
             orderChips.addView(SqlEditorViews.chip(context, orderBy.get(i).label(),
                     () -> {
                         final SqlOrder order = orderBy.get(index);
-                        orderBy.set(index, new SqlOrder(order.alias(),
-                                order.direction() == SortDirection.ASCENDING
-                                        ? SortDirection.DESCENDING : SortDirection.ASCENDING));
+                        orderBy.set(index, new SqlOrder(order.alias(), order.direction() == SortDirection.ASCENDING ? SortDirection.DESCENDING : SortDirection.ASCENDING));
                         refresh();
                     },
                     () -> {
@@ -446,8 +449,7 @@ final class SqlEditorDialog implements SqlSnippetTarget {
                 .setView(SqlEditorViews.padded(context, input))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     dropOrder(column.alias());
-                    statement.getProjection().set(index,
-                            new SqlProjection(column.term(), input.getText().toString()));
+                    statement.getProjection().set(index, new SqlProjection(column.term(), input.getText().toString()));
                     refresh();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -513,10 +515,8 @@ final class SqlEditorDialog implements SqlSnippetTarget {
         final List<SqlComparison> on = new ArrayList<>(existing == null ? new ArrayList<>() : existing.on());
 
         final LinearLayout content = SqlEditorViews.column(context);
-        content.addView(SqlEditorViews.spinner(context, typeLabels, chosenType[0],
-                which -> chosenType[0] = which));
-        content.addView(SqlEditorViews.spinner(context, tables, Math.max(0, chosenTable[0]),
-                which -> chosenTable[0] = which));
+        content.addView(SqlEditorViews.spinner(context, typeLabels, chosenType[0], which -> chosenType[0] = which));
+        content.addView(SqlEditorViews.spinner(context, tables, Math.max(0, chosenTable[0]), which -> chosenTable[0] = which));
         final ChipGroup conditions = SqlEditorViews.chipGroup(context);
         content.addView(conditions);
         fillJoinConditions(conditions, on, tables, chosenTable);
