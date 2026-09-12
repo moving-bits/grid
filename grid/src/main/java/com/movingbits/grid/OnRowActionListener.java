@@ -24,6 +24,9 @@ public interface OnRowActionListener {
     int DELETE = 1;
 
     /**
+     * @param number  the running number the row carries in the number column, 1-based within
+     *                the whole data set - what the user pressed and what a question should
+     *                name back to them
      * @param type    what is being asked for; {@link #DELETE} for now
      * @param key     the row's primary key: one entry per field, name and value, in the order
      *                of the key itself
@@ -32,5 +35,5 @@ public interface OnRowActionListener {
      *                ones. A key says little to whoever is asked; this is what a question is
      *                built from
      */
-    void onRowAction(int type, Map<String, String> key, Map<String, String> columns);
+    void onRowAction(int number, int type, Map<String, String> key, Map<String, String> columns);
 }

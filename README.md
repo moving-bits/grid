@@ -125,18 +125,20 @@ the table has a primary key (so that the row can be addressed) and the applicati
 hooked into it:
 
 ```java
-grid.onRowAction((type, key, columns) -> {
-            // type is OnRowActionListener.DELETE; key carries one entry per field of the
-            // primary key, columns the rest of the row as it is on display, ready to be shown
-            askTheUser(columns, () -> grid.performRowAction(type, key));   // whenever it comes
+grid.onRowAction((number, type, key, columns) -> {
+            // number is what the number column shows; type is OnRowActionListener.DELETE; key
+            // carries one entry per field of the primary key, columns the rest of the row as
+            // it is on display, ready to be shown
+            askTheUser(number, columns, () -> grid.performRowAction(type, key));  // whenever
         })
         .onRowActionPerformed((type, key, success) -> log(type, key, success));
 ```
 
-The long press just reports to the calling application. Along with the key it hands over the
-rest of the row as it is on display – in display order and without the hidden columns – so that
-a question put to the user can name the record instead of its number. That can perform any
-check it wants and needs to call `performRowAction(type, key)` to trigger deletion:
+The long press just reports to the calling application. It hands over the number the row
+carries in the number column, the key that addresses it, and the rest of the row as it is on
+display – in display order and without the hidden columns – so that a question put to the user
+can name the record instead of leaving them to guess. That can perform any check it wants and
+needs to call `performRowAction(type, key)` to trigger deletion:
 
 `performRowAction(type, key)` checks its parameters first – a known action, and a key that
 addresses a row of the current table with one value per field of its primary key – then deletes

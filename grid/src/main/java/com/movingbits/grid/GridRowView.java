@@ -496,6 +496,12 @@ final class GridRowView extends LinearLayout {
      */
     private void drawColumnDividers(final Canvas canvas) {
         final float bottom = getHeight() - dividerHeight;
+        // The number column is no cell of the grid, but it is a column like the others and is
+        // set apart from what follows in the same way.
+        if (!cells.isEmpty()) {
+            final float edge = numberCell.getRight();
+            canvas.drawRect(edge - COLUMN_DIVIDER_WIDTH_PX, 0f, edge, bottom, columnDividerPaint);
+        }
         for (int i = 0; i < cells.size(); i++) {
             final float edge = columnEdgeX(i);
             if (!Float.isNaN(edge)) {

@@ -296,14 +296,17 @@ public class MainActivity extends AppCompatActivity {
      * A long tap on a row's number asks first. The grid waits for nothing; only the answer to
      * the question hands the matter back to it, with the very parameters it reported.
      */
-    private void askDeleteRow(final int type, final Map<String, String> key, final Map<String, String> columns) {
+    private void askDeleteRow(final int number, final int type, final Map<String, String> key,
+                              final Map<String, String> columns) {
         if (type != OnRowActionListener.DELETE || databaseGrid == null || key.isEmpty()) {
             return;
         }
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.delete_row)
-                // The key names the row, the other columns show which one it is.
-                .setMessage(getString(R.string.delete_row_question, keyText(key)) + "\n\n" + columnsText(columns))
+                // The number is the one the user pressed, the key names the row, and the other
+                // columns show which one it is.
+                .setMessage(getString(R.string.delete_row_question, number, keyText(key))
+                        + "\n\n" + columnsText(columns))
                 .setPositiveButton(R.string.delete, (dialog, which) -> databaseGrid.performRowAction(type, key))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();

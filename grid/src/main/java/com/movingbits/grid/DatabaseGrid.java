@@ -583,7 +583,9 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         }
         final Map<String, String> key = primaryKeyOf(rowIndex);
         if (key != null) {
-            rowActionListener.onRowAction(OnRowActionListener.DELETE, key, otherColumnsOf(rowIndex));
+            // The number column counts from one; that is the number the user pressed.
+            rowActionListener.onRowAction(rowIndex + 1, OnRowActionListener.DELETE, key,
+                    otherColumnsOf(rowIndex));
         }
     }
 
