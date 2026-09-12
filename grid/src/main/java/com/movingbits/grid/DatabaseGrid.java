@@ -7,8 +7,10 @@ import android.os.Bundle;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,9 +66,12 @@ public class DatabaseGrid extends Grid implements GridDataSource {
     protected TableInfo tableInfo;
 
     private final List<String> tables = new ArrayList<>();
+    /** The tables that have been read, by name; the SQL editor asks for them repeatedly. */
+    private final Map<String, TableInfo> knownTables = new HashMap<>();
     private OnTablesLoadedListener tablesLoadedListener;
     private OnRowActionListener rowActionListener;
     private OnRowActionPerformedListener rowActionPerformedListener;
+    private OnStatementExecutedListener statementExecutedListener;
 
     private float textWidthDp = DEFAULT_TEXT_WIDTH_DP;
     private float numberWidthDp = DEFAULT_NUMBER_WIDTH_DP;
@@ -185,6 +190,7 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         this.database = database;
         this.currentTable = "";
         this.tableInfo = null;
+        knownTables.clear();
         closeCursor();
         clearColumns();
         loadTables();
@@ -222,6 +228,22 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         return this;
     }
 
+    /**
+     * Hook for statements that have been run: the queries and changes of the SQL editor, and
+     * the change that writes an edited cell back. Meant for a log of the application.
+     */
+    public DatabaseGrid onStatementExecuted(final OnStatementExecutedListener listener) {
+        this.statementExecutedListener = listener;
+        return this;
+    }
+
+    /** Reports a statement that has been run; without a hook nothing happens. */
+    protected void notifyStatementExecuted(final SqlExecution execution) {
+        if (statementExecutedListener != null) {
+            statementExecutedListener.onStatementExecuted(execution);
+        }
+    }
+
     /** Names of the available tables, alphabetically. */
     public List<String> getTables() {
         return Collections.unmodifiableList(tables);
@@ -251,7 +273,7 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         if (database == null || table == null || !tables.contains(table)) {
             return false;
         }
-        final TableInfo info = readTableInfo(table);
+        final TableInfo info = tableInfoOf(table);
         if (info == null || info.columns.isEmpty()) {
             return false;
         }
@@ -305,6 +327,29 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         if (tablesLoadedListener != null && !tables.isEmpty()) {
             tablesLoadedListener.onTablesLoaded(getTables());
         }
+    }
+
+    /**
+     * The columns of a table, read from the table itself and remembered afterwards.
+     *
+     * <p>The SQL editor asks for every table that takes part in a statement, and it asks again
+     * with every change; reading the same declarations over and over would be waste.</p>
+     *
+     * @param table name of a table out of {@link #getTables()}
+     * @return its columns, or {@code null} when they cannot be read
+     */
+    protected TableInfo tableInfoOf(final String table) {
+        if (database == null || table == null || !tables.contains(table)) {
+            return null;
+        }
+        TableInfo info = knownTables.get(table);
+        if (info == null) {
+            info = readTableInfo(table);
+            if (info != null) {
+                knownTables.put(table, info);
+            }
+        }
+        return info;
     }
 
     /** Reads name, type, write protection and primary key of a table's columns. */
@@ -374,6 +419,11 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         fixedColumns(keys.size());
     }
 
+    /** The width a column of this type receives; see {@link #columnWidthDp(float, float)}. */
+    protected float widthDpOf(final ColumnType type) {
+        return type.isNumeric() ? numberWidthDp : textWidthDp;
+    }
+
     private GridColumn toGridColumn(final ColumnInfo column) {
         final ColumnType type = typeOf(column.storageClass);
         return new GridColumn(column.name)
@@ -381,7 +431,7 @@ public class DatabaseGrid extends Grid implements GridDataSource {
                 .type(type)
                 // The key must not change, otherwise the row would lose its identity.
                 .readOnly(column.isPrimaryKey() || type == ColumnType.UNKNOWN)
-                .widthDp(type.isNumeric() ? numberWidthDp : textWidthDp);
+                .widthDp(widthDpOf(type));
     }
 
     /** The grid's column type for a storage form. */
@@ -408,9 +458,41 @@ public class DatabaseGrid extends Grid implements GridDataSource {
 
     // ---------------------------------------------------------- Data source
 
+    /**
+     * What the queries read from: the current table.
+     *
+     * <p>{@link SqlGrid} puts a clicked-together statement in its place, as a subquery. That
+     * is all it takes for paging, the sorting by header taps and the search dialog to keep
+     * working on its result - they build their clauses around this.</p>
+     */
+    protected String fromSql() {
+        return quote(currentTable);
+    }
+
+    /** The parameters {@link #fromSql()} brings along; none for a plain table. */
+    protected String[] fromArgs() {
+        return new String[0];
+    }
+
+    /** {@code true} when there is something to query; without it the display stays empty. */
+    protected boolean isQueryable() {
+        return hasCurrentTable();
+    }
+
+    /** The parameters of a whole query: those of the source, then those of the condition. */
+    private String[] argsOf(final Condition where) {
+        final String[] source = fromArgs();
+        if (source.length == 0) {
+            return where.args();
+        }
+        final List<String> args = new ArrayList<>(Arrays.asList(source));
+        args.addAll(where.args);
+        return args.toArray(new String[0]);
+    }
+
     @Override
     public int getRowCount(final String search) {
-        if (!hasCurrentTable()) {
+        if (!isQueryable()) {
             return 0;
         }
         final String key = String.valueOf(search);
@@ -421,7 +503,7 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         final Condition where = whereOf(SearchRequest.parse(search));
         int count = 0;
         try (Cursor number = database.rawQuery(
-                "SELECT COUNT(*) AS number FROM " + quote(currentTable) + where.sql, where.args())) {
+                "SELECT COUNT(*) AS number FROM " + fromSql() + where.sql, argsOf(where))) {
             if (number.moveToFirst()) {
                 count = number.getInt(0);
             }
@@ -436,7 +518,7 @@ public class DatabaseGrid extends Grid implements GridDataSource {
 
     @Override
     public String[][] getPage(final int page, final int count, final String sort, final String search) {
-        if (!hasCurrentTable() || count <= 0) {
+        if (!isQueryable() || count <= 0) {
             return new String[0][];
         }
         final Cursor rows = cursorFor(sort, search);
@@ -487,9 +569,9 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         closeCursor();
 
         final Condition where = whereOf(SearchRequest.parse(search));
-        final String sql = "SELECT * FROM " + quote(currentTable) + where.sql + orderBy(sort);
+        final String sql = "SELECT * FROM " + fromSql() + where.sql + orderBy(sort);
         try {
-            cursor = database.rawQuery(sql, where.args());
+            cursor = database.rawQuery(sql, argsOf(where));
             cursorFor = key;
         } catch (SQLiteException unreadable) {
             Log.w(LOGTAG, "query failed: " + unreadable.getMessage() + " - " + sql);
@@ -499,7 +581,11 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         return cursor;
     }
 
-    private void closeCursor() {
+    /**
+     * Drops the open cursor, so that the next page is queried anew. To be called whenever the
+     * data has changed under it - after a statement of the SQL editor, for instance.
+     */
+    protected void closeCursor() {
         if (cursor != null) {
             cursor.close();
         }
@@ -550,8 +636,13 @@ public class DatabaseGrid extends Grid implements GridDataSource {
             database.execSQL(sql, args.toArray());
         } catch (SQLiteException notWritable) {
             Log.w(LOGTAG, "writing failed: " + notWritable.getMessage() + " - " + sql);
+            notifyStatementExecuted(new SqlExecution(SqlExecution.Origin.CELL, SqlKind.UPDATE,
+                    sql, textOf(args), -1, false, notWritable.getMessage()));
             return false;
         }
+        // One row exactly: the primary key addresses it.
+        notifyStatementExecuted(new SqlExecution(SqlExecution.Origin.CELL, SqlKind.UPDATE,
+                sql, textOf(args), 1, true, null));
 
         // The open cursor still carries the old content; the next page is queried anew.
         closeCursor();
@@ -735,6 +826,15 @@ public class DatabaseGrid extends Grid implements GridDataSource {
         return where.toString();
     }
 
+    /** The arguments of a statement as texts, as the log carries them. */
+    private static List<String> textOf(final List<Object> args) {
+        final List<String> texts = new ArrayList<>();
+        for (Object arg : args) {
+            texts.add(arg == null ? null : String.valueOf(arg));
+        }
+        return texts;
+    }
+
     /** The value to store, matching the column's storage form. */
     private static Object valueOf(final ColumnInfo column, final String text) {
         if (text == null || text.isEmpty()) {
@@ -889,7 +989,7 @@ public class DatabaseGrid extends Grid implements GridDataSource {
     }
 
     /** Puts a name in quotation marks, so that keywords work as names too. */
-    private static String quote(final String identifier) {
+    protected static String quote(final String identifier) {
         return '"' + identifier.replace("\"", "\"\"") + '"';
     }
 

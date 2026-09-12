@@ -4,6 +4,7 @@
     <string name="demo_cities">Demo: Cities</string>
     <string name="demo_mountains">Demo: Mountains</string>
     <string name="demo_database">Demo: Database</string>
+    <string name="demo_sqleditor">Demo: SQL editor</string>
 
     <string name="previous">Previous</string>
     <string name="next">Next</string>
@@ -50,4 +51,12 @@
     <string name="grid_operator_greater">greater than</string>
     <string name="grid_operator_greater_or_equal">greather than or equals</string>
     -->
+
+    <!-- sql editor demo -->
+    <string name="sql_editor">Click an SQL statement together</string>
+    <string name="hint_statement">%1$s: %2$d rows</string>
+    <string name="hint_statement_failed">Statement refused</string>
+    <string name="load_snippet">Stored statements</string>
+    <string name="hint_snippet_saved">Statement stored</string>
+    <string name="hint_no_snippets">No statement stored yet</string>
 </resources>

@@ -17,13 +17,16 @@ import org.json.JSONObject;
  *   "configuration": { ... },
  *   "search": { "search": [ ... ] },
  *   "data_order": [ "<name>" ],
- *   "table": "<name>"
+ *   "table": "<name>",
+ *   "statement": { ... }, "query": { ... }
  * }
  * }</pre>
  *
  * <p>The state holds more than the configuration object: the search as well, which is
  * transient and therefore no part of it, and the data order, which the display order does not
- * tell once columns have been moved. {@code table} only appears for a {@link DatabaseGrid}.</p>
+ * tell once columns have been moved. {@code table} only appears for a {@link DatabaseGrid},
+ * {@code statement} and {@code query} only for a {@link SqlGrid}: the statement the editor is
+ * working on, and the query whose result is on display.</p>
  *
  * <p>Reading is as forgiving as it is for the configuration object: whatever is missing leaves
  * the grid as it is, and a string that cannot be read has no effect at all.</p>
@@ -34,6 +37,8 @@ final class GridState {
     private static final String FIELD_SEARCH = "search";
     private static final String FIELD_DATA_ORDER = "data_order";
     private static final String FIELD_TABLE = "table";
+    private static final String FIELD_STATEMENT = "statement";
+    private static final String FIELD_QUERY = "query";
 
     private GridState() {
             // utility class
@@ -99,6 +104,50 @@ final class GridState {
     static String tableOf(final String json) {
         final JSONObject root = parse(json);
         return root == null ? "" : root.optString(FIELD_TABLE, "");
+    }
+
+    /**
+     * Adds the statements of a {@link SqlGrid} to a state object: the one the editor is
+     * working on, and the query whose result is on display.
+     *
+     * @param statement the working statement as JSON, or {@code null}
+     * @param query     the displayed query as JSON, or {@code null}
+     */
+    static String withStatements(final String json, final String statement, final String query) {
+        final JSONObject root = parse(json);
+        if (root == null) {
+            return json;
+        }
+        try {
+            putObject(root, FIELD_STATEMENT, statement);
+            putObject(root, FIELD_QUERY, query);
+        } catch (JSONException ignore) {
+            return json;
+        }
+        return root.toString();
+    }
+
+    /** The working statement a state object carries, as JSON; empty when it carries none. */
+    static String statementOf(final String json) {
+        return objectOf(json, FIELD_STATEMENT);
+    }
+
+    /** The displayed query a state object carries, as JSON; empty when it carries none. */
+    static String queryOf(final String json) {
+        return objectOf(json, FIELD_QUERY);
+    }
+
+    private static void putObject(final JSONObject root, final String field, final String json) throws JSONException {
+        final JSONObject value = parse(json);
+        if (value != null) {
+            root.put(field, value);
+        }
+    }
+
+    private static String objectOf(final String json, final String field) {
+        final JSONObject root = parse(json);
+        final JSONObject value = root == null ? null : root.optJSONObject(field);
+        return value == null ? "" : value.toString();
     }
 
     private static JSONObject parse(final String json) {

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material symbol "sql" (fonts.google.com), converted from the 960-unit grid with its origin
+  at the bottom left into the grid Android expects, with the origin at the top left.
+  Left untinted; the colour is set in code or by the button.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M160,600q-17 0-28.5-11.5T120,560v-40h60v20h80v-40H160q-17 0-28.5-11.5T120,460v-60q0-17 11.5-28.5T160,360h120q17 0 28.5 11.5T320,400v40h-60v-20h-80v40h100q17 0 28.5 11.5T320,500v60q0 17-11.5 28.5T280,600H160Zm310 60v-60h-30q-17 0-28.5-11.5T400,560v-160q0-17 11.5-28.5T440,360h120q17 0 28.5 11.5T600,400v160q0 17-11.5 28.5T560,600h-30v60h-60Zm-10-120h80v-120h-80v120Zm220-180h60v180h100v60H680v-240Z"/>
+</vector>

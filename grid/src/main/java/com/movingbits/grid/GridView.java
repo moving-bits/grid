@@ -794,6 +794,36 @@ public class GridView extends FrameLayout {
     }
 
     /**
+     * Opens the SQL editor, in which a statement is clicked together out of blocks.
+     *
+     * <p>It is opened by the application, which provides a control of its own for it; the
+     * Material symbol "sql" is available in the library for that:
+     * {@code com.movingbits.grid.R.drawable.grid_ic_sql}. Nothing happens before "Run".</p>
+     *
+     * <p>The editor needs a {@link SqlGrid} - only that one can show the result of a statement
+     * as a grid. With any other grid the call does nothing.</p>
+     *
+     * <p>The result of a query lands in the display at once, with the columns of its
+     * projection; a change reports the number of rows it touched and leaves the display where
+     * it is, but fetches it anew, because the rows underneath may have changed.</p>
+     */
+    public void showSqlEditor() {
+        if (!(grid instanceof SqlGrid sqlGrid)) {
+            return;
+        }
+        SqlEditorDialog.show(getContext(), sqlGrid, execution -> {
+            if (!execution.successful()) {
+                return;
+            }
+            // A query brings columns of its own along, a change may have altered what is on
+            // display: both call for the whole view to be built anew.
+            currentPage = 0;
+            refresh();
+            notifyConfigurationChanged();
+        });
+    }
+
+    /**
      * Opens the search dialog: an operator and a value field per column, and above them the
      * entry "Global" for the search across every column.
      *

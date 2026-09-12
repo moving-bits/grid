@@ -81,6 +81,19 @@
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/demo_sqleditor"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/demo_sqleditor" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="2" />
         </LinearLayout>
     </FrameLayout>
@@ -110,11 +123,27 @@
             android:contentDescription="@string/select_table"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:minWidth="48dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:minWidth="40dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:visibility="gone"
             app:icon="@drawable/grid_ic_table"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_sqlEditor"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/sql_editor"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:minWidth="40dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:visibility="gone"
+            app:icon="@drawable/grid_ic_sql"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />
 
@@ -126,9 +155,9 @@
             android:contentDescription="@string/config_columns"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:minWidth="48dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:minWidth="40dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             app:icon="@drawable/grid_ic_reorder"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />
@@ -141,9 +170,9 @@
             android:contentDescription="@string/search"
             android:insetLeft="0dp"
             android:insetRight="0dp"
-            android:minWidth="48dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:minWidth="40dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             app:icon="@drawable/grid_ic_search"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />
@@ -154,6 +183,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
+            android:maxLines="1"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
 
         <com.google.android.material.button.MaterialButton

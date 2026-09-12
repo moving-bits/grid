@@ -11,6 +11,10 @@ import com.movingbits.grid.MemGrid;
 import com.movingbits.grid.OnRowActionListener;
 import com.movingbits.grid.SortCriterion;
 import com.movingbits.grid.SortDirection;
+import com.movingbits.grid.SqlExecution;
+import com.movingbits.grid.SqlGrid;
+import com.movingbits.grid.SqlSnippetTarget;
+import com.movingbits.grid.SqlStatement;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -34,8 +38,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONException;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
@@ -56,6 +64,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String CONFIG_STRING_CITIES = "config_cities";
     private static final String CONFIG_STRING_MOUNTAINS = "config_mountains";
     private static final String CONFIG_STRING_DATABASE = "config_database";
+
+    /** Where the demo keeps the statements of the SQL editor, and how many of them. */
+    private static final String SNIPPETS = "sql_snippets";
+    private static final int MAX_SNIPPETS = 5;
 
     /** Key of the running demo within the stored state. */
     private static final String STATE_DEMO = "demo";
@@ -80,6 +92,8 @@ public class MainActivity extends AppCompatActivity {
     private GridView gridView;
     /** Set while the database demo is running; {@code null} otherwise. */
     private DatabaseGrid databaseGrid;
+    /** Set while the SQL editor demo is running; {@code null} otherwise. */
+    private SqlGrid sqlGrid;
     private TextView tvPageNumOfNum;
     private MaterialButton btColumConfig;
     private MaterialButton btSearch;
@@ -88,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
     private Toast hint;
 
     /** The demos on offer; the stored state names the one that is running. */
-    private enum Demo { CITIES, MOUNTAINS, DATABASE }
+    private enum Demo { CITIES, MOUNTAINS, DATABASE, SQLEDITOR }
 
     /** The demo currently on screen; {@code null} while the selection is showing. */
     private Demo runningDemo;
@@ -102,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.demo_cities).setOnClickListener(view -> runDemo(Demo.CITIES, null));
         findViewById(R.id.demo_mountains).setOnClickListener(view -> runDemo(Demo.MOUNTAINS, null));
         findViewById(R.id.demo_database).setOnClickListener(view -> runDemo(Demo.DATABASE, null));
+        findViewById(R.id.demo_sqleditor).setOnClickListener(view -> runDemo(Demo.SQLEDITOR, null));
 
         // After a change of screen orientation the demo carries on where it left off.
         final Demo running = getDemoFrom(savedInstanceState);
@@ -164,8 +179,10 @@ public class MainActivity extends AppCompatActivity {
             case CITIES -> initMemDemoCities();
             case MOUNTAINS -> initMemDemoMountains();
             case DATABASE -> initDatabaseDemo();
+            case SQLEDITOR -> initSqlEditorDemo();
         };
         databaseGrid = grid instanceof DatabaseGrid database ? database : null;
+        sqlGrid = grid instanceof SqlGrid sql ? sql : null;
         grid.readState(state);
 
         gridView = new GridView(this);
@@ -236,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
                         showTableSelection(tables);
                     }
                 }))
+                .onStatementExecuted(this::logStatement)
                 .onConfigurationChanged(json -> {
                     storeConfiguration(databaseConfigKey(), json);
                     highlightButton(btColumConfig, grid().hasHiddenColumns());
@@ -254,6 +272,112 @@ public class MainActivity extends AppCompatActivity {
                 .onSortChanged(order -> showHint(addSortIndicator(order)))
                 .onHeaderLongClick(column -> showHint(getString(R.string.hint_title_long, column + 1)));
         return databaseGrid;
+    }
+
+    /**
+     * The SQL editor demo: a grid on the same database that stays empty until a statement has
+     * been clicked together. The columns come from the statement, so there is no stored column
+     * configuration for it - it would refer to columns that the next statement does not have.
+     */
+    private Grid initSqlEditorDemo() {
+        sqlGrid = new SqlGrid();
+        sqlGrid.onSnippetSave(this::storeSnippet)
+                .onSnippetLoad(this::chooseSnippet)
+                .setDatabase(DataStore.getDatabase(this))
+                // As in the database demo, only that here a statement may be on display
+                // instead of a table - then there is nothing to choose either.
+                .onTablesLoaded(tables -> findViewById(R.id.root).post(() -> {
+                    if (sqlGrid != null && !sqlGrid.hasCurrentTable() && sqlGrid.getQuery() == null) {
+                        showTableSelection(tables);
+                    }
+                }))
+                .onStatementExecuted(this::logStatement)
+                .onSearchChanged(searchConfig -> highlightButton(btSearch, !searchConfig.isEmpty()))
+                .rowsPerPage(ROWS_PER_PAGE)
+                .alternatingRowColors(true)
+                .adjustableFixedBoundary(true)
+                .onFixedBoundaryChanged(percent -> showHint(getString(R.string.hint_boundary, Math.round(percent * 100))))
+                .onCellLongClick(this::showCell)
+                .onSortChanged(order -> showHint(addSortIndicator(order)))
+                .onHeaderLongClick(column -> showHint(getString(R.string.hint_title_long, column + 1)));
+        return sqlGrid;
+    }
+
+    /**
+     * What the library reports about a statement that has been run. Everything goes into the
+     * log; onto the screen only what the editor set off, because a cell that was written back
+     * says so itself.
+     */
+    private void logStatement(final SqlExecution execution) {
+        Log.i(LOGTAG, execution.origin() + " " + execution);
+        if (execution.origin() != SqlExecution.Origin.EDITOR) {
+            return;
+        }
+        showHint(execution.successful()
+                ? getString(R.string.hint_statement, execution.kind(), execution.rowCount())
+                : getString(R.string.hint_statement_failed));
+    }
+
+    // -------------------------------------------------------------- snippets
+
+    /**
+     * Stores a statement of the SQL editor. Where that happens is up to the application; the
+     * demo keeps the last few of them in its preferences.
+     */
+    private void storeSnippet(final String statement) {
+        final List<String> stored = storedSnippets();
+        // The same statement twice would only take a place away from another one.
+        stored.remove(statement);
+        stored.add(0, statement);
+        while (stored.size() > MAX_SNIPPETS) {
+            stored.remove(stored.size() - 1);
+        }
+        final JSONArray array = new JSONArray();
+        for (String snippet : stored) {
+            array.put(snippet);
+        }
+        getSharedPreferences(SETTINGS, MODE_PRIVATE).edit().putString(SNIPPETS, array.toString()).apply();
+        showHint(getString(R.string.hint_snippet_saved));
+    }
+
+    /**
+     * Puts the stored statements up for choice and hands the chosen one back to the editor.
+     * The editor waits for nothing, so the question may stand as long as it likes.
+     */
+    private void chooseSnippet(final SqlSnippetTarget editor) {
+        final List<String> stored = storedSnippets();
+        if (stored.isEmpty()) {
+            showHint(getString(R.string.hint_no_snippets));
+            return;
+        }
+        final String[] labels = new String[stored.size()];
+        for (int i = 0; i < labels.length; i++) {
+            // What the statement says in SQL is the one label that tells them apart.
+            labels[i] = SqlStatement.parse(stored.get(i)).render().sql();
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.load_snippet)
+                .setItems(labels, (dialog, which) -> editor.load(stored.get(which)))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** The stored statements, the most recent one first. */
+    private List<String> storedSnippets() {
+        final List<String> stored = new ArrayList<>();
+        try {
+            final JSONArray array = new JSONArray(
+                    getSharedPreferences(SETTINGS, MODE_PRIVATE).getString(SNIPPETS, ""));
+            for (int i = 0; i < array.length(); i++) {
+                final String snippet = array.optString(i, "");
+                if (!snippet.isEmpty()) {
+                    stored.add(snippet);
+                }
+            }
+        } catch (JSONException nothingStored) {
+            // Nothing has been stored yet, or not in a form that can be read.
+        }
+        return stored;
     }
 
     // ------------------------------------------------------ table selection
@@ -480,14 +604,18 @@ public class MainActivity extends AppCompatActivity {
         tvPrev.setOnClickListener(v -> gridView.previousPage());
         tvNext.setOnClickListener(v -> gridView.nextPage());
         MaterialButton btSelectTable = findViewById(R.id.button_selectTable);
+        MaterialButton btSqlEditor = findViewById(R.id.button_sqlEditor);
         btColumConfig = findViewById(R.id.button_configColumns);
         btSearch = findViewById(R.id.button_search);
         btColumConfig.setOnClickListener(v -> gridView.showColumnSettings());
         btSearch.setOnClickListener(v -> gridView.showSearch());
 
-        // The table selection only exists where there are tables to choose from.
+        // The table selection belongs to both database demos; the SQL editor demo shows a
+        // table or the result of a statement and switches between the two whenever it likes.
         btSelectTable.setVisibility(databaseGrid == null ? View.GONE : View.VISIBLE);
         btSelectTable.setOnClickListener(v -> showTableSelection(databaseGrid.getTables()));
+        btSqlEditor.setVisibility(runningDemo == Demo.SQLEDITOR ? View.VISIBLE : View.GONE);
+        btSqlEditor.setOnClickListener(v -> gridView.showSqlEditor());
 
         // The ordinary colour comes from the theme; highlighting uses the accent colour.
         buttoncolorDefault = btColumConfig.getIconTint();

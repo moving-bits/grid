@@ -21,4 +21,99 @@
     <string name="grid_operator_not_ends_with">ends not with</string>
     <string name="grid_operator_contains">contains</string>
     <string name="grid_operator_not_contains">does not contain</string>
+
+    <!-- sql editor: operators beyond those of the search -->
+    <string name="grid_sql_operator_like">is like</string>
+    <string name="grid_sql_operator_not_like">is not like</string>
+    <string name="grid_sql_operator_in">one of</string>
+    <string name="grid_sql_operator_not_in">none of</string>
+    <string name="grid_sql_operator_between">between</string>
+    <string name="grid_sql_operator_is_null">is empty</string>
+    <string name="grid_sql_operator_is_not_null">is not empty</string>
+
+    <!-- sql editor: how conditions and tables are joined -->
+    <string name="grid_sql_junction_and">and</string>
+    <string name="grid_sql_junction_or">or</string>
+    <string name="grid_sql_join_inner">only matching rows</string>
+    <string name="grid_sql_join_left">all rows on the left</string>
+
+    <!-- sql editor: what keeps a statement from being run -->
+    <string name="grid_sql_finding_no_table">Choose a table.</string>
+    <string name="grid_sql_finding_no_columns">Choose at least one column for the result.</string>
+    <string name="grid_sql_finding_no_assignments">Choose at least one column to change.</string>
+    <string name="grid_sql_finding_alias_missing">Every column of the result needs a name.</string>
+    <string name="grid_sql_finding_alias_duplicate">Two columns of the result carry the same name.</string>
+    <string name="grid_sql_finding_join_incomplete">A joined table is missing its condition.</string>
+    <string name="grid_sql_finding_condition_incomplete">A condition is incomplete.</string>
+    <string name="grid_sql_finding_star_with_join">All columns and a joined table do not go together; choose the columns.</string>
+    <string name="grid_sql_finding_aggregate_in_where">A condensed value belongs in HAVING, not in WHERE.</string>
+    <string name="grid_sql_finding_group_by_missing">Group by every column that is not condensed.</string>
+    <string name="grid_sql_finding_having_without_group">HAVING needs a group or a condensed value.</string>
+    <string name="grid_sql_finding_order_not_in_result">Sorted by something that is no column of the result.</string>
+    <string name="grid_sql_finding_function_unknown">Unknown function.</string>
+    <string name="grid_sql_finding_function_without_arguments">A function needs at least one parameter.</string>
+    <string name="grid_sql_finding_aggregate_in_assignment">A condensed value cannot be written into a column.</string>
+    <string name="grid_sql_finding_join_in_update">A change works on one table only.</string>
+    <string name="grid_sql_finding_star_not_countable">Only COUNT works on all columns at once.</string>
+
+    <!-- sql editor: the dialog itself -->
+    <string name="grid_sql_title">SQL Editor</string>
+    <string name="grid_sql_run">Run</string>
+    <string name="grid_sql_load">Load a stored statement</string>
+    <string name="grid_sql_save">Store this statement</string>
+    <string name="grid_sql_kind_select">Query</string>
+    <string name="grid_sql_kind_update">Change</string>
+    <string name="grid_sql_distinct">no duplicates</string>
+    <string name="grid_sql_valid">The statement can be run.</string>
+    <string name="grid_sql_add">Add</string>
+    <string name="grid_sql_section_select">Columns of the result</string>
+    <string name="grid_sql_section_from">Table</string>
+    <string name="grid_sql_section_set">Change to</string>
+    <string name="grid_sql_section_where">Condition</string>
+    <string name="grid_sql_section_group">Group by</string>
+    <string name="grid_sql_section_having">Condition on the groups</string>
+    <string name="grid_sql_section_order">Sort order</string>
+
+    <!-- sql editor: choosing the blocks -->
+    <string name="grid_sql_term_column">Column</string>
+    <string name="grid_sql_term_value">Value</string>
+    <string name="grid_sql_term_aggregate">Condensed value</string>
+    <string name="grid_sql_term_function">Function</string>
+    <string name="grid_sql_term_star">All columns</string>
+    <string name="grid_sql_choose_table">Table</string>
+    <string name="grid_sql_choose_column">Column</string>
+    <string name="grid_sql_choose_aggregate">Condense how</string>
+    <string name="grid_sql_choose_join">Join a table</string>
+    <string name="grid_sql_choose_block">Which block</string>
+    <string name="grid_sql_alias">Name in the result</string>
+    <string name="grid_sql_distinct_values">count every value only once</string>
+    <string name="grid_sql_value_type">Kind of value</string>
+    <string name="grid_sql_value_hint">Value; empty stands for NULL</string>
+    <string name="grid_sql_value_text">Text</string>
+    <string name="grid_sql_value_integer">Whole number</string>
+    <string name="grid_sql_value_decimal">Decimal number</string>
+    <string name="grid_sql_function_name">Name of the function</string>
+    <string name="grid_sql_function_parameter">Parameter %1$d</string>
+    <string name="grid_sql_condition_title">Condition</string>
+    <string name="grid_sql_condition_group">Group of conditions</string>
+    <string name="grid_sql_add_group">+ group</string>
+    <string name="grid_sql_junction">How they apply together</string>
+    <string name="grid_sql_operand">Compare with</string>
+    <string name="grid_sql_order_ascending">ascending</string>
+    <string name="grid_sql_order_descending">descending</string>
+    <string name="grid_sql_remove">Remove</string>
+
+    <!-- sql editor: running a statement -->
+    <string name="grid_sql_confirm_title">Change every row?</string>
+    <string name="grid_sql_confirm_all">The change carries no condition and affects every row of the table.</string>
+    <string name="grid_sql_result_title">Result</string>
+    <string name="grid_sql_result_failed">The database refused the statement:\n%1$s</string>
+    <plurals name="grid_sql_confirm_rows">
+        <item quantity="one">The change carries no condition and affects the single row of the table.</item>
+        <item quantity="other">The change carries no condition and affects all %1$d rows of the table.</item>
+    </plurals>
+    <plurals name="grid_sql_result_changed">
+        <item quantity="one">One row changed.</item>
+        <item quantity="other">%1$d rows changed.</item>
+    </plurals>
 </resources>

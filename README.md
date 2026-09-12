@@ -146,6 +146,103 @@ the row and finally reports through `onRowActionPerformed`. That hook hears of e
 `success` tells whether the row is really gone; what the application turned down beforehand
 never reaches the grid. After a deletion the display is fetched anew by itself.
 
+### The SQL editor: `SqlGrid`
+
+`SqlGrid` extends `DatabaseGrid` by a statement that is clicked together out of blocks, and
+shows its result as a grid again:
+
+```java
+SqlGrid grid = new SqlGrid();
+grid.setDatabase(database)
+        .onStatementExecuted(execution -> log(execution))   // a log of the application
+        .rowsPerPage(10);
+view.setGrid(grid);
+
+// opened by a control of the application:
+view.showSqlEditor();
+```
+
+The editor is opened by the application, as the column settings and the search are; for a
+fitting control the Material symbol "sql" comes with the library:
+`com.movingbits.grid.R.drawable.grid_ic_sql`.
+
+A `SqlGrid` shows **either a table or the result of a statement**, whichever was chosen last:
+`setCurrentTable(...)` drops the statement, running a query drops the table. Both remain open
+at any time, so an application can offer a table selection next to the editor – as the demo
+does – and switch between the two whenever it likes. Only a table can be written to; the
+result of a statement is read-only.
+
+Every clause has a row of chips: a short tap changes a block, the cross takes it out, the plus
+adds one. Underneath stands the statement as it looks at that moment, and under that the first
+thing that keeps it from being run - the button unlocks only once nothing does. Nothing is
+taken over before "Run"; the editor works on a copy.
+
+| Clause | What it holds |
+|--------|---------------|
+| Query / Change | `SELECT` or `UPDATE`; there is deliberately no `DELETE` and nothing that changes the schema |
+| Columns of the result | a block per column, each carrying a name of its own; also `*` for all columns of the table |
+| Table | the table read from or changed, and the tables joined to it (`JOIN`, `LEFT JOIN`) with their `ON` condition |
+| Change to | which column of the table receives which value (`UPDATE` only) |
+| Condition | `WHERE`: conditions that apply together with `AND` or `OR`, and groups of their own for the other way round |
+| Group by | `GROUP BY`: the columns that form the groups |
+| Condition on the groups | `HAVING`: as the condition above, only here a condensed value may take part |
+| Sort order | `ORDER BY`: a column of the result, its direction on every tap |
+
+| Block | Where it comes from |
+|-------|---------------------|
+| Column | a selection list of the tables taking part, read from the database itself |
+| Value | entered as text, a whole number or a decimal number; empty stands for `NULL` |
+| Condensed value | `COUNT`, `SUM`, `TOTAL`, `AVG`, `MIN`, `MAX`, `GROUP_CONCAT`, each of them optionally over distinct values only |
+| Function | a name out of the functions SQLite brings along, and a parameter per block - which is why calls nest as deeply as needed |
+| All columns | `*`, and `COUNT(*)` as a condensed value over it |
+
+**Values never stand in the statement.** They go to the database as parameters of a prepared
+statement, and identifiers come from the tables that were read and are quoted. The name of a
+function is the only free text that ends up in a statement, and it has to be one SQLite knows;
+`SqlGrid.sqlFunctions(String...)` adds the ones an application has registered itself.
+
+**Checked in two stages**, both before anything runs. The first judges the statement as a
+whole: are the parts there, do they fit together, does every column of the result carry a name
+of its own, is what is sorted by part of the result, is a condensed value in `HAVING` rather
+than in `WHERE`. The second hands the statement to SQLite through `EXPLAIN`, which prepares it
+and hands back its plan without reading or changing a single row. Only then is "Run" allowed.
+
+Before a change without a condition goes ahead, the editor asks and names the number of rows
+it would touch - counted through a query built out of the same table and the same condition.
+
+**The result of a query** becomes the display: its columns are the ones the projection named,
+their types follow from the terms behind them, and paging, sorting by a tap on the header row,
+the search and the column settings all keep working, because the statement goes into the
+queries as a subquery. A result is read-only - without a primary key no row of it could be
+addressed unambiguously; changing data is what the `UPDATE` of the editor is for. A change
+reports the number of rows it touched and leaves the display where it is, but fetches it anew.
+
+`onStatementExecuted(...)` reports every statement the user set off - the queries and changes
+of the editor and the write of an edited cell - with its text, its parameters, the number of
+rows and whether the database carried it out. `SqlExecution.toString()` puts the values back
+into the text, for a log that is to be read by people.
+
+**Storing statements** is up to the application, and it is offered two buttons in the top right
+corner of the editor for it. Each only appears where the application has said what to do with
+it:
+
+```java
+grid.onSnippetSave(statement -> store(statement))          // a string, to be kept anywhere
+    .onSnippetLoad(editor -> chooseStored(stored -> editor.load(stored)));
+```
+
+The save button hands the statement out as a string and hears nothing more of it. The load
+button only asks: the application picks whatever it has to pick – out of a list put to the user,
+say – and hands a statement back through the `editor` it was given, whenever that may be. What
+is in the editor at that moment is dropped for it.
+
+The string is the library's own form of a statement and is only to be handed back as it is;
+what it says in SQL is `SqlStatement.parse(stored).render().sql()`, which the demo uses as the
+label of its list.
+
+Statement and result belong to the state (see [Keeping state on configuration changes](#keeping-state-on-configuration-changes-eg-screen-rotation)) and are
+therefore back after a change of screen orientation; the editor itself closes with the turn.
+
 ### Configuration
 
 | Method                          | Effect                                                          |
@@ -159,6 +256,7 @@ never reaches the grid. After a deletion the display is fetched anew by itself.
 | `configuration(String)`         | take over a configuration object as JSON                        |
 | `onConfigurationChanged`        | hook carrying the new configuration object after every change   |
 | `addState` / `readState`        | store and read the state on a change of screen orientation      |
+| `onStatementExecuted`           | hook for statements that were run (`DatabaseGrid`, `SqlGrid`)   |
 | `ignoreColumns(String...)`      | exclude columns entirely                                        |
 | `clearColumns()`                | drop every column (a different data set, e.g. another table)    |
 | `sortable(boolean)`             | sorting by tapping the header row (default on)                  |

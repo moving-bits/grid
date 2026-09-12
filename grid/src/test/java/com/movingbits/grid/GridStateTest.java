@@ -173,6 +173,25 @@ public class GridStateTest {
         assertEquals(2, grid().state(state).getFixedColumnCount());
     }
 
+    // ----------------------------------------------------------- Statement
+
+    @Test
+    public void theStatementsOfAnSqlGridAreAddedToTheStateAndReadBackFromIt() {
+        String statement = SqlStatements.update().toJson();
+        String query = SqlStatements.groupedSelect().toJson();
+
+        String state = GridState.withStatements(grid().toStateJson(), statement, query);
+
+        assertEquals(statement, GridState.statementOf(state));
+        assertEquals(query, GridState.queryOf(state));
+        // Without statements the fields stay away, and what cannot be read is left alone.
+        assertEquals("", GridState.statementOf(grid().toStateJson()));
+        assertEquals("", GridState.queryOf(grid().toStateJson()));
+        assertEquals("{", GridState.withStatements("{", statement, query));
+        // The rest of the state stays intact next to them.
+        assertEquals(Arrays.asList("A", "B", "C", "D", "E"), visible(grid().state(state)));
+    }
+
     // -------------------------------------------------------------- MemGrid
 
     @Test
