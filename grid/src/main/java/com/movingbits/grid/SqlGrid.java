@@ -53,6 +53,7 @@ public class SqlGrid extends DatabaseGrid implements SqlColumnTypes {
     private final List<String> extraFunctions = new ArrayList<>();
     private OnSnippetSaveListener snippetSaveListener;
     private OnSnippetLoadListener snippetLoadListener;
+    private OnEditorClosedListener editorClosedListener;
 
     public SqlGrid() {
     }
@@ -280,6 +281,19 @@ public class SqlGrid extends DatabaseGrid implements SqlColumnTypes {
     public SqlGrid onSnippetLoad(final OnSnippetLoadListener listener) {
         this.snippetLoadListener = listener;
         return this;
+    }
+
+    /**
+     * Hook for the editor being closed, whether a statement was run or not. What is on display
+     * afterwards - a table or the result of a statement - the grid tells on request.
+     */
+    public SqlGrid onEditorClosed(final OnEditorClosedListener listener) {
+        this.editorClosedListener = listener;
+        return this;
+    }
+
+    OnEditorClosedListener getEditorClosedListener() {
+        return editorClosedListener;
     }
 
     OnSnippetSaveListener getSnippetSaveListener() {

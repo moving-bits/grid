@@ -49,6 +49,8 @@ final class SqlEditorDialog implements SqlSnippetTarget {
     private SqlStatement statement;
 
     private AlertDialog dialog;
+    /** Whether a statement was carried out before the editor closed. */
+    private boolean executed;
     private TextView preview;
     private TextView finding;
 
@@ -132,6 +134,14 @@ final class SqlEditorDialog implements SqlSnippetTarget {
                 .create();
         dialog.setOnShowListener(shown -> dialog.getButton(DialogInterface.BUTTON_POSITIVE)
                 .setOnClickListener(view -> run()));
+        // However the editor goes away - run, cancelled, or a tap beside it - the application
+        // hears of it exactly once.
+        dialog.setOnDismissListener(closed -> {
+            final OnEditorClosedListener listener = grid.getEditorClosedListener();
+            if (listener != null) {
+                listener.onEditorClosed(executed);
+            }
+        });
         dialog.show();
         refresh();
     }
@@ -641,9 +651,11 @@ final class SqlEditorDialog implements SqlSnippetTarget {
 
     private void execute() {
         final SqlExecution execution = grid.execute(statement);
-        dialog.dismiss();
-        // The view first, so that a result is on screen behind the message.
+        executed = execution.successful();
+        // The view first: a result is then on screen behind the message, and the application
+        // hears of the editor closing with the display already up to date.
         callback.onExecuted(execution);
+        dialog.dismiss();
         if (!execution.successful()) {
             showFailure(execution.error());
         } else if (execution.kind() == SqlKind.UPDATE) {

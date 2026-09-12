@@ -172,6 +172,12 @@ at any time, so an application can offer a table selection next to the editor �
 does – and switch between the two whenever it likes. Only a table can be written to; the
 result of a statement is read-only.
 
+Which of the two is on display the grid says on request: `hasCurrentTable()` for a table,
+`getQuery()` for the result of a statement. That the editor has been left is reported by
+`onEditorClosed(executed -> ...)` – however it went, whether run, cancelled or tapped past –
+and by then the display is already up to date. A statement that was run reaches the application
+beforehand through `onStatementExecuted(...)`.
+
 Every clause has a row of chips: a short tap changes a block, the cross takes it out, the plus
 adds one. Underneath stands the statement as it looks at that moment, and under that the first
 thing that keeps it from being run - the button unlocks only once nothing does. Nothing is
@@ -271,6 +277,7 @@ therefore back after a change of screen orientation; the editor itself closes wi
 | `onCellClick` / `onCellLongClick`     | hook for a short / long tap on a data cell                 |
 | `onItemClick` / `onItemLongClick`     | the same with the record instead of the row of texts (`MemGrid`) |
 | `onHeaderClick` / `onHeaderLongClick` | hook for a short / long tap on a header cell               |
+| `onEditorClosed`                | hook for SQL Editor being closed                                |
 
 Column widths: `ColumnWidth.dp(x)`, `ColumnWidth.percent(0..1)` or – as the default –
 `ColumnWidth.remaining()`. Alignment: `CellAlignment.START` (default), `CENTER`, `END`.

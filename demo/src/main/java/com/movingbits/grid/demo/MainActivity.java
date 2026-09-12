@@ -97,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvPageNumOfNum;
     private MaterialButton btColumConfig;
     private MaterialButton btSearch;
+    private MaterialButton btSqlEditor;
     private ColorStateList buttoncolorDefault;
     private int accentColor;
     private Toast hint;
@@ -283,6 +284,12 @@ public class MainActivity extends AppCompatActivity {
         sqlGrid = new SqlGrid();
         sqlGrid.onSnippetSave(this::storeSnippet)
                 .onSnippetLoad(this::chooseSnippet)
+                // Once the editor is gone, the button says whether a statement result is on
+                // display or a plain table.
+                .onEditorClosed(executed -> {
+                    Log.i(LOGTAG, "sql editor closed, executed: " + executed);
+                    highlightButton(btSqlEditor, sqlGrid.getQuery() != null);
+                })
                 .setDatabase(DataStore.getDatabase(this))
                 // As in the database demo, only that here a statement may be on display
                 // instead of a table - then there is nothing to choose either.
@@ -406,6 +413,8 @@ public class MainActivity extends AppCompatActivity {
         gridView.refresh();
         highlightButton(btColumConfig, grid().hasHiddenColumns());
         highlightButton(btSearch, grid().isSearching());
+        // A table on display is no statement result.
+        highlightButton(btSqlEditor, false);
         showHint(getString(R.string.hint_table_selected, table));
     }
 
@@ -604,7 +613,7 @@ public class MainActivity extends AppCompatActivity {
         tvPrev.setOnClickListener(v -> gridView.previousPage());
         tvNext.setOnClickListener(v -> gridView.nextPage());
         MaterialButton btSelectTable = findViewById(R.id.button_selectTable);
-        MaterialButton btSqlEditor = findViewById(R.id.button_sqlEditor);
+        btSqlEditor = findViewById(R.id.button_sqlEditor);
         btColumConfig = findViewById(R.id.button_configColumns);
         btSearch = findViewById(R.id.button_search);
         btColumConfig.setOnClickListener(v -> gridView.showColumnSettings());
@@ -622,6 +631,7 @@ public class MainActivity extends AppCompatActivity {
         accentColor = MaterialColors.getColor(btColumConfig, com.google.android.material.R.attr.colorSecondary, buttoncolorDefault.getDefaultColor());
         highlightButton(btColumConfig, grid().hasHiddenColumns());
         highlightButton(btSearch, grid().isSearching());
+        highlightButton(btSqlEditor, sqlGrid != null && sqlGrid.getQuery() != null);
 
         gridView.setOnPageChangedListener((page, numPages) -> {
             tvPageNumOfNum.setText(getString(R.string.pageNumOfNum, page + 1, numPages));
