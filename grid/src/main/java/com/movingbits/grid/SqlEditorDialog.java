@@ -516,8 +516,16 @@ final class SqlEditorDialog implements SqlSnippetTarget {
 
         final LinearLayout content = SqlEditorViews.column(context);
         content.addView(SqlEditorViews.spinner(context, typeLabels, chosenType[0], which -> chosenType[0] = which));
-        content.addView(SqlEditorViews.spinner(context, tables, Math.max(0, chosenTable[0]), which -> chosenTable[0] = which));
         final ChipGroup conditions = SqlEditorViews.chipGroup(context);
+        content.addView(SqlEditorViews.spinner(context, tables, Math.max(0, chosenTable[0]), which -> {
+            if (which == chosenTable[0]) {
+                return;
+            }
+            chosenTable[0] = which;
+            // What was tied to the table chosen before says nothing about this one.
+            on.clear();
+            fillJoinConditions(conditions, on, tables, chosenTable);
+        }));
         content.addView(conditions);
         fillJoinConditions(conditions, on, tables, chosenTable);
 
@@ -554,13 +562,11 @@ final class SqlEditorDialog implements SqlSnippetTarget {
     private void fillJoinConditions(final ChipGroup chips, final List<SqlComparison> on,
                                     final List<String> tables, final int[] chosenTable) {
         chips.removeAllViews();
-        final SqlStatement reachable = SqlStatement.parse(statement.toJson());
-        reachable.getJoins().add(new SqlJoin(SqlJoinType.INNER, tables.get(Math.max(0, chosenTable[0])), null));
-
         for (int i = 0; i < on.size(); i++) {
             final int index = i;
             chips.addView(SqlEditorViews.chip(context, on.get(i).label(),
-                    () -> SqlConditionDialog.showComparison(context, grid, reachable, false,
+                    () -> SqlConditionDialog.showComparison(context, grid,
+                            reachableWith(tables, chosenTable), false,
                             on.get(index), condition -> {
                                 on.set(index, (SqlComparison) condition);
                                 fillJoinConditions(chips, on, tables, chosenTable);
@@ -571,11 +577,26 @@ final class SqlEditorDialog implements SqlSnippetTarget {
                     }));
         }
         chips.addView(SqlEditorViews.addChip(context,
-                () -> SqlConditionDialog.showComparison(context, grid, reachable, false, null,
+                () -> SqlConditionDialog.showComparison(context, grid,
+                        reachableWith(tables, chosenTable), false, null,
                         condition -> {
                             on.add((SqlComparison) condition);
                             fillJoinConditions(chips, on, tables, chosenTable);
                         })));
+    }
+
+    /**
+     * The statement as the pickers of this dialog are to see it: with the table being joined
+     * already part of it, so that its columns are on offer.
+     *
+     * <p>It is put together whenever a picker opens, not once when the dialog is built: the
+     * table is only being chosen here, and the choice may change while the dialog stands.</p>
+     */
+    private SqlStatement reachableWith(final List<String> tables, final int[] chosenTable) {
+        final SqlStatement reachable = SqlStatement.parse(statement.toJson());
+        reachable.getJoins().add(new SqlJoin(SqlJoinType.INNER,
+                tables.get(Math.max(0, chosenTable[0])), null));
+        return reachable;
     }
 
     /**
